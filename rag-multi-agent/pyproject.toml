@@ -1,7 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "rag-multi-agent"
+name = "Multi-Agent-RAG"
 version = "0.1.0"
-description = "Add your description here"
+description = "Multi-Agent RAG System for Telecom"
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = []
+requires-python = ">=3.10"
+
+dependencies = [
+    "easyocr>=1.7.2",
+    "pdf2image>=1.17.0",
+    "torch>=2.9.1",
+    "torchaudio>=2.9.1",
+    "torchvision>=0.24.1"
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
