@@ -32,6 +32,9 @@ class EmbeddingManager:
     def get_embeddings(self, sentences: list[str]):
         return self._model.embed_documents(sentences)
 
+    def get_model(self):
+        return self._model
+
 
 if __name__ == "__main__":
     embedding_manager = EmbeddingManager()
