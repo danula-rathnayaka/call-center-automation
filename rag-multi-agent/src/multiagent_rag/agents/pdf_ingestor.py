@@ -1,8 +1,12 @@
 import os
 
+import easyocr
+import numpy as np
+from pdf2image import convert_from_path
+
 from multiagent_rag.agents.base_ingestor import BaseIngestor
 from multiagent_rag.utils.chunker import Chunker
-from multiagent_rag.utils.ocr import read_pdf_with_easyocr
+from multiagent_rag.utils.poppler import get_poppler_path
 
 
 class PDFIngestor(BaseIngestor):
@@ -10,7 +14,7 @@ class PDFIngestor(BaseIngestor):
         self.chunker = Chunker()
 
     def process(self, file_path: str):
-        raw_text = read_pdf_with_easyocr(file_path)
+        raw_text = self._read_pdf_with_easyocr(file_path)
 
         if not raw_text.strip():
             return []
@@ -23,3 +27,21 @@ class PDFIngestor(BaseIngestor):
         chunks = self.chunker.split_text(raw_text, metadata)
 
         return chunks
+
+    def _read_pdf_with_easyocr(self, pdf_path):
+        reader = easyocr.Reader(['en'])
+        poppler_path = get_poppler_path()
+
+        try:
+            images = convert_from_path(pdf_path, poppler_path=poppler_path)
+        except Exception:
+            return ""
+
+        full_text = ""
+        for i, image in enumerate(images):
+            image_np = np.array(image)
+            result = reader.readtext(image_np, detail=0)
+            page_text = ' '.join(result)
+            full_text += f"\n{page_text}\n"
+
+        return full_text
