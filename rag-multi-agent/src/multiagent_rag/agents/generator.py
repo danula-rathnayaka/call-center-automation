@@ -19,14 +19,19 @@ class Generator:
         with open(os.path.join("src", "prompts", "rag_prompt.txt"), "r", encoding="utf-8") as f:
             template_text = f.read()
 
-        self.prompt = ChatPromptTemplate.from_template(template_text)
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", template_text),
+            ("placeholder", "{chat_history}"),
+            ("human", "Context:\n{context}\n\nQuestion: {question}")
+        ])
         self.chain = self.prompt | self.llm | StrOutputParser()
 
-    def generate(self, query: str, context: str) -> str:
+    def generate(self, query: str, context: str, history: list) -> str:
         try:
             response = self.chain.invoke({
                 "context": context,
-                "question": query
+                "question": query,
+                "chat_history": history
             })
             return response
         except Exception as e:
