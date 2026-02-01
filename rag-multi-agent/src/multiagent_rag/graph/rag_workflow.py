@@ -106,7 +106,7 @@ def tool_agent_node(state: RAGState):
     response = agent.invoke(query, history)
 
     # --- FIX START ---
-    # We must return 'final_answer' so main.py doesn't crash.
+    # We must return 'final_answer' so ingestion.py doesn't crash.
     # response.content is the text the agent wants to say (e.g., "What is your phone number?")
     return {
         "chat_history": [HumanMessage(content=query), response],
