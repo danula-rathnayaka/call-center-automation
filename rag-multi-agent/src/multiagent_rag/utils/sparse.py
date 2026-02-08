@@ -1,3 +1,5 @@
+import os
+
 from pinecone_text.sparse import BM25Encoder
 
 
@@ -12,8 +14,18 @@ class SparseEmbeddingManager:
         return cls._instance
 
     def _initialize_model(self):
-        print("[Sparse] Initializing BM25 Encoder...")
-        self._encoder = BM25Encoder().default()
+        json_path = "tools/BM25/bm25_params.json"
+
+        if os.path.exists(json_path):
+            print(f"[Sparse] Loading BM25 from local file ({json_path})...")
+            self._encoder = BM25Encoder().load(json_path)
+
+        else:
+            print("[Sparse] Local params not found. Downloading default...")
+            self._encoder = BM25Encoder().default()
+
+            self._encoder.dump(json_path)
+            print(f"[Sparse] Saved params to {json_path} for future speedups.")
 
     def get_sparse_vector(self, text: str):
         return self._encoder.encode_documents(text)

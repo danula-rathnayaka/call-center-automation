@@ -46,6 +46,9 @@ def contextualize_node(state: RAGState):
     query = state["query"]
     history = state.get("chat_history", [])
 
+    if not history:
+        return {"reformulated_query": query}
+
     contextualizer = Contextualizer()
     new_query = contextualizer.reformulate(query, history)
 

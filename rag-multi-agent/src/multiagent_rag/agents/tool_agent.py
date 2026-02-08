@@ -8,7 +8,7 @@ from multiagent_rag.tools.crm_tools import crm_tools
 class ToolAgent:
     def __init__(self):
         self.llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",
             temperature=0
         )
 
