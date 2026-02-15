@@ -24,3 +24,20 @@ See: `docs/COLAB_SETUP.md`
 
 ## Inference (Option A)
 After training completes, run the snippet in `notebooks/inference_cell.py`.
+
+## Workflow Overview
+
+This repository uses a controller + subprocess approach to avoid VRAM accumulation during hyperparameter tuning.
+
+### Scripts
+- `train_one_trial.py`: Runs one hyperparameter trial in its own process. Trains briefly and evaluates using a Flan-T5 judge. Writes `result.json` in the trial output folder.
+- `controller.py`: Runs multiple trials as subprocesses, selects the best config, then runs final training as a separate subprocess.
+- `final_train.py`: Trains the final model using the best hyperparameters and saves the LoRA adapter + tokenizer to `./llama2-emowoz-best`.
+
+### Colab
+See `notebooks/colab_pipeline.py` for a copy-paste Colab flow:
+- installs and environment checks
+- Hugging Face login
+- Google Drive mount
+- controller run
+- inference example
