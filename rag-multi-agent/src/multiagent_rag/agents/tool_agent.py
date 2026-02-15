@@ -3,7 +3,9 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
 from multiagent_rag.tools.crm_tools import crm_tools
+from multiagent_rag.utils.logger import get_logger
 
+logger = get_logger(__name__)
 
 class ToolAgent:
     def __init__(self):
@@ -32,5 +34,5 @@ class ToolAgent:
                 "chat_history": history
             })
         except Exception as e:
-            print(f"[ToolAgent] Error: {e}")
+            logger.error(f"Tool agent invocation failed: {str(e)}")
             return "System Error"

@@ -4,30 +4,28 @@ import uuid
 from multiagent_rag.graph.rag_workflow import rag_app
 from multiagent_rag.utils.db_client import PineconeClient
 from multiagent_rag.utils.embeddings import EmbeddingManager
-from multiagent_rag.utils.reranker import Reranker
 from multiagent_rag.utils.sparse import SparseEmbeddingManager
+from multiagent_rag.utils.logger import get_logger
+
+logger = get_logger("retriever_main")
 
 
 def initialise_system():
-    print("\n[System] Warming up components...")
+    logger.info("Initializing support system components")
 
     start_time = time.time()
 
-    print(""
-          "Connecting to Database")
+    logger.info("Establishing connection to Pinecone database")
     _ = PineconeClient()
 
-    print("Loading Dense Embeddings (All-MiniLM)")
+    logger.info("Loading dense embedding model (All-MiniLM)")
     _ = EmbeddingManager()
 
-    print("Loading Sparse Encoder")
+    logger.info("Initializing sparse encoder parameters")
     _ = SparseEmbeddingManager()
 
-    print("Loading Re-Ranker (FlashRank)")
-    _ = Reranker()
-
     elapsed = time.time() - start_time
-    print(f"[System] Ready! (Startup time: {elapsed:.2f}s)")
+    logger.info(f"System initialization complete in {elapsed:.2f} seconds")
 
 
 def retriever():

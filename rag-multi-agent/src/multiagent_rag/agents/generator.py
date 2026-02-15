@@ -5,8 +5,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 
+from multiagent_rag.utils.logger import get_logger
+
 load_dotenv()
 
+logger = get_logger(__name__)
 
 class Generator:
     def __init__(self):
@@ -35,5 +38,5 @@ class Generator:
             })
             return response
         except Exception as e:
-            print(f"[Generator] Error: {e}")
+            logger.error(f"Response generation failed: {str(e)}")
             return "System Error: Could not generate response."

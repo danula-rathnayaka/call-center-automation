@@ -7,7 +7,9 @@ from pdf2image import convert_from_path
 from multiagent_rag.agents.base_ingestor import BaseIngestor
 from multiagent_rag.utils.chunker import Chunker
 from multiagent_rag.utils.poppler import get_poppler_path
+from multiagent_rag.utils.logger import get_logger
 
+logger = get_logger(__name__)
 
 class PDFIngestor(BaseIngestor):
     def __init__(self):
@@ -34,7 +36,8 @@ class PDFIngestor(BaseIngestor):
 
         try:
             images = convert_from_path(pdf_path, poppler_path=poppler_path)
-        except Exception:
+        except Exception as e:
+            logger.error(f"PDF context conversion failed for {pdf_path}: {str(e)}")
             return ""
 
         full_text = ""

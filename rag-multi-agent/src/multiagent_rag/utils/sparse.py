@@ -3,6 +3,10 @@ import os
 from pinecone_text.sparse import BM25Encoder
 
 
+from multiagent_rag.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 class SparseEmbeddingManager:
     _instance = None
     _encoder = None
@@ -17,15 +21,15 @@ class SparseEmbeddingManager:
         json_path = "tools/BM25/bm25_params.json"
 
         if os.path.exists(json_path):
-            print(f"[Sparse] Loading BM25 from local file ({json_path})...")
+            logger.info(f"Loading BM25 encoder parameters from local file: {json_path}")
             self._encoder = BM25Encoder().load(json_path)
 
         else:
-            print("[Sparse] Local params not found. Downloading default...")
+            logger.info("Local BM25 parameters not found. Downloading default encoder parameters.")
             self._encoder = BM25Encoder().default()
 
             self._encoder.dump(json_path)
-            print(f"[Sparse] Saved params to {json_path} for future speedups.")
+            logger.info(f"Saved default BM25 parameters to {json_path} for future initialization speed")
 
     def get_sparse_vector(self, text: str):
         return self._encoder.encode_documents(text)

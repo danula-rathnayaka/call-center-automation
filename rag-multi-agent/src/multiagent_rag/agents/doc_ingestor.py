@@ -4,7 +4,9 @@ from docx import Document
 
 from multiagent_rag.agents.base_ingestor import BaseIngestor
 from multiagent_rag.utils.chunker import Chunker
+from multiagent_rag.utils.logger import get_logger
 
+logger = get_logger(__name__)
 
 class DocIngestor(BaseIngestor):
     def __init__(self):
@@ -39,5 +41,6 @@ class DocIngestor(BaseIngestor):
 
             return chunks
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to process DOCX file {file_path}: {str(e)}")
             return []

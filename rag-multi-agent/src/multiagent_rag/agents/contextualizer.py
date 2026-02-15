@@ -1,9 +1,6 @@
-import os
+from multiagent_rag.utils.logger import get_logger
 
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_groq import ChatGroq
-
+logger = get_logger(__name__)
 
 class Contextualizer:
     def __init__(self):
@@ -31,5 +28,5 @@ class Contextualizer:
             "chat_history": history,
             "input": query
         })
-        print(f"   Original: '{query}' -> New: '{new_query}'")
+        logger.info(f"Query reformulated. Original: '{query}' -> Reformulated: '{new_query}'")
         return new_query

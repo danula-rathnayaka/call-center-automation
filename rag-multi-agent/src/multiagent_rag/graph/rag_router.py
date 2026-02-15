@@ -6,9 +6,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 
 from multiagent_rag.state.router_response_schema import RouteResponse
+from multiagent_rag.utils.logger import get_logger
 
 load_dotenv()
 
+logger = get_logger(__name__)
 
 class IntentRouter:
     def __init__(self):
@@ -39,7 +41,8 @@ class IntentRouter:
 
             return response.intent
 
-        except Exception:
+        except Exception as e:
+            logger.error(f"Routing failed for query: {query}. Error: {str(e)}")
             return "technical"
 
 

@@ -10,7 +10,9 @@ from multiagent_rag.agents.tool_agent import ToolAgent
 from multiagent_rag.graph.rag_router import IntentRouter
 from multiagent_rag.state.rag_state import RAGState
 from multiagent_rag.tools.crm_tools import crm_tools
+from multiagent_rag.utils.logger import get_logger
 
+logger = get_logger(__name__)
 
 def check_for_tool_calls(state: RAGState):
     history = state.get("chat_history", [])
@@ -29,6 +31,7 @@ def route_query(state: RAGState):
     query = state["query"]
     router = IntentRouter()
     intent = router.route(query)
+    logger.info(f"Query routed with intent: {intent}")
 
     if intent == "technical":
         return "contextualizer"
@@ -49,6 +52,7 @@ def contextualize_node(state: RAGState):
     if not history:
         return {"reformulated_query": query}
 
+    logger.info("Starting query contextualization")
     contextualizer = Contextualizer()
     new_query = contextualizer.reformulate(query, history)
 
@@ -57,6 +61,7 @@ def contextualize_node(state: RAGState):
 
 def retrieve_node(state: RAGState):
     query = state["reformulated_query"]
+    logger.info(f"Starting document retrieval for query: {query}")
     retriever = Retriever()
     docs = retriever.retrieve(query)
     return {"retrieved_docs": docs}
@@ -67,6 +72,7 @@ def generate_node(state: RAGState):
     docs = state["retrieved_docs"]
     history = state.get("chat_history", [])
 
+    logger.info("Starting response generation")
     generator = Generator()
     retriever = Retriever()
     context_text = retriever.format_docs(docs)
@@ -105,6 +111,7 @@ def tool_agent_node(state: RAGState):
     query = state["query"]
     history = state.get("chat_history", [])
 
+    logger.info("Invoking tool agent")
     agent = ToolAgent()
     response = agent.invoke(query, history)
 

@@ -9,8 +9,11 @@ from pinecone import Pinecone, ServerlessSpec
 from multiagent_rag.utils.embeddings import EmbeddingManager
 from multiagent_rag.utils.sparse import SparseEmbeddingManager
 
+from multiagent_rag.utils.logger import get_logger
+
 load_dotenv()
 
+logger = get_logger(__name__)
 
 class PineconeClient:
     _instance = None
@@ -34,7 +37,7 @@ class PineconeClient:
         existing_indexes = [i.name for i in self._pc_client.list_indexes()]
 
         if self._index_name not in existing_indexes:
-            print(f"[DB] Creating HYBRID Index '{self._index_name}'...")
+            logger.info(f"Creating hybrid index '{self._index_name}'...")
             self._pc_client.create_index(
                 name=self._index_name,
                 dimension=384,
@@ -44,7 +47,7 @@ class PineconeClient:
             while not self._pc_client.describe_index(self._index_name).status['ready']:
                 time.sleep(1)
 
-        print("Connected to PINECONE")
+        logger.info("Connection to Pinecone successful")
         self._index = self._pc_client.Index(self._index_name)
 
         self._dense_manager = EmbeddingManager()
@@ -55,7 +58,7 @@ class PineconeClient:
             return False
 
         try:
-            print(f"[DB] Processing {len(documents)} docs for Hybrid Search...")
+            logger.info(f"Processing {len(documents)} documents for hybrid search insertion")
 
             texts = [doc.page_content for doc in documents]
 
@@ -76,11 +79,11 @@ class PineconeClient:
                 })
 
             self._index.upsert(vectors=vectors_to_upsert)
-            print(f"[DB] Successfully upserted {len(vectors_to_upsert)} hybrid vectors.")
+            logger.info(f"Successfully upserted {len(vectors_to_upsert)} hybrid vectors to Pinecone")
             return True
 
         except Exception as e:
-            print(f"[DB] Error inserting: {e}")
+            logger.error(f"Failed to insert documents into Pinecone: {str(e)}")
             return False
 
     def search(self, query: str, k: int = 5):
@@ -103,15 +106,15 @@ class PineconeClient:
             return docs
 
         except Exception as e:
-            print(f"[DB] Search failed: {e}")
+            logger.error(f"Hybrid search operation failed: {str(e)}")
             return []
 
     def delete_all(self):
         try:
             self._index.delete(delete_all=True)
-            print("[DB] All data wiped.")
+            logger.info("Successfully wiped all data from the Pinecone index")
         except Exception as e:
-            print(f"[DB] Delete failed: {e}")
+            logger.error(f"Failed to wipe Pinecone index data: {str(e)}")
 
 
 if __name__ == '__main__':

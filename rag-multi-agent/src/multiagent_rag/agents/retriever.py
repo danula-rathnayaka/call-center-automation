@@ -1,6 +1,10 @@
 from multiagent_rag.utils.db_client import PineconeClient
 
 
+from multiagent_rag.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 class Retriever:
     def __init__(self):
         self.db = PineconeClient()
@@ -9,7 +13,7 @@ class Retriever:
         results = self.db.search(query, k=k)
 
         if not results:
-            print("[Retriever] No documents found.")
+            logger.warning(f"No relevant documents found for query: {query}")
             return []
 
         clean_docs = []
@@ -19,7 +23,7 @@ class Retriever:
                 "metadata": doc.metadata
             })
 
-        print(f"[Retriever] Found {len(clean_docs)} relevant chunks.")
+        logger.info(f"Retrieved {len(clean_docs)} relevant document chunks.")
         return clean_docs
 
     def format_docs(self, docs: list) -> str:
