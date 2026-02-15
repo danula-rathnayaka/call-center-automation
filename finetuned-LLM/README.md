@@ -41,3 +41,14 @@ See `notebooks/colab_pipeline.py` for a copy-paste Colab flow:
 - Google Drive mount
 - controller run
 - inference example
+
+## Outputs
+
+During tuning:
+- `runs/trial_*/result.json`: Contains `avg_judge_score_0_15` and the trial hyperparameters.
+- `runs/all_results.csv`: Aggregated trial results.
+- `runs/best_params.json`: Best hyperparameters selected by the controller.
+
+Final training:
+- `./llama2-emowoz-best/`: Saved LoRA adapter + tokenizer from `final_train.py`.
+- `./llama2-emowoz-best/best_params_used.json`: The hyperparameters used for the final run.
