@@ -52,3 +52,13 @@ During tuning:
 Final training:
 - `./llama2-emowoz-best/`: Saved LoRA adapter + tokenizer from `final_train.py`.
 - `./llama2-emowoz-best/best_params_used.json`: The hyperparameters used for the final run.
+
+
+## Troubleshooting
+
+- Ensure you run Hugging Face `login()` before running `controller.py` so the subprocess scripts can download the base model.
+- Ensure Google Drive is mounted and `EMOWOZ_PATH` is correct:
+  - `/content/drive/MyDrive/AI/emowoz-dialmage.json`
+- Check GPU availability in Colab:
+  - `torch.cuda.is_available()` should be True
+  - `torch.cuda.get_device_name(0)` should show your GPU
