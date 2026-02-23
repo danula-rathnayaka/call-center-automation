@@ -18,18 +18,27 @@ class SparseEmbeddingManager:
         return cls._instance
 
     def _initialize_model(self):
-        json_path = "tools/BM25/bm25_params.json"
+        current_file_path = os.path.abspath(__file__)
 
-        if os.path.exists(json_path):
-            logger.info(f"Loading BM25 encoder parameters from local file: {json_path}")
-            self._encoder = BM25Encoder().load(json_path)
+        utils_dir = os.path.dirname(current_file_path)
+        multiagent_rag_dir = os.path.dirname(utils_dir)
+        src_dir = os.path.dirname(multiagent_rag_dir)
+        project_root = os.path.dirname(src_dir)
 
+        abs_json_path = os.path.join(project_root, "tools", "BM25", "bm25_params.json")
+
+        if os.path.exists(abs_json_path):
+            logger.info(f"Loading BM25 parameters from local file: {abs_json_path}")
+            self._encoder = BM25Encoder().load(abs_json_path)
         else:
-            logger.info("Local BM25 parameters not found. Downloading default encoder parameters.")
+            logger.info("Local BM25 parameters not found. Downloading default...")
             self._encoder = BM25Encoder().default()
 
-            self._encoder.dump(json_path)
-            logger.info(f"Saved default BM25 parameters to {json_path} for future initialization speed")
+            directory = os.path.dirname(abs_json_path)
+            os.makedirs(directory, exist_ok=True)
+
+            self._encoder.dump(abs_json_path)
+            logger.info(f"Saved default BM25 parameters to {abs_json_path}")
 
     def get_sparse_vector(self, text: str):
         return self._encoder.encode_documents(text)
