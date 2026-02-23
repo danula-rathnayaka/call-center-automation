@@ -68,12 +68,12 @@ def save_to_db_node(state: IngestionState):
 def route_file_type(state: IngestionState):
     file_path = state["file_path"].lower()
 
-    if file_path.endswith(".pdf"):
-        return "pdf_agent"
-    elif file_path.endswith(".docx") or file_path.endswith(".doc"):
-        return "doc_agent"
-    elif file_path.startswith("http://") or file_path.startswith("https://"):
+    if file_path.startswith(("http://", "https://")):
         return "url_agent"
+    elif file_path.endswith(".pdf"):
+        return "pdf_agent"
+    elif file_path.endswith((".docx", ".doc")):
+        return "doc_agent"
     else:
         logger.warning(f"Unsupported input type detected: {file_path}")
         return "end"
