@@ -12,7 +12,77 @@ declare global {
 export default function Home() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [audioLevel, setAudioLevel] = useState(0);
+
   const recognitionRef = useRef<any>(null);
+
+  // Audio analysis refs
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopAudioAnalysis = () => {
+    if (animationFrameRef.current)
+      cancelAnimationFrame(animationFrameRef.current);
+    if (sourceRef.current) {
+      try {
+        sourceRef.current.disconnect();
+      } catch (e) {}
+    }
+    if (analyserRef.current) {
+      try {
+        analyserRef.current.disconnect();
+      } catch (e) {}
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      try {
+        audioContextRef.current.close();
+      } catch (e) {}
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+    }
+    setAudioLevel(0);
+  };
+
+  const startAudioAnalysis = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const audioContext = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )();
+      audioContextRef.current = audioContext;
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      sourceRef.current = source;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      dataArrayRef.current = dataArray;
+
+      const updateAudioLevel = () => {
+        if (!analyserRef.current || !dataArrayRef.current) return;
+        analyserRef.current.getByteFrequencyData(dataArrayRef.current as any);
+        let sum = 0;
+        for (let i = 0; i < dataArrayRef.current.length; i++) {
+          sum += dataArrayRef.current[i];
+        }
+        const average = sum / dataArrayRef.current.length;
+        setAudioLevel(average);
+        animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+      };
+
+      updateAudioLevel();
+    } catch (err) {
+      console.error("Error accessing microphone for volume analysis", err);
+    }
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -42,9 +112,19 @@ export default function Home() {
 
     recognition.onend = () => {
       setIsListening(false);
+      stopAudioAnalysis();
     };
 
     recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+      stopAudioAnalysis();
+    };
   }, []);
 
   const handleMicClick = () => {
@@ -53,10 +133,12 @@ export default function Home() {
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
+      stopAudioAnalysis();
     } else {
       setTranscript("");
       recognitionRef.current.start();
       setIsListening(true);
+      startAudioAnalysis();
     }
   };
 
@@ -68,11 +150,34 @@ export default function Home() {
       <p className="mt-3 text-xl text-gray-800">How can I help you today ?</p>
 
       {/* Mic Button */}
-      <div className="mt-24">
+      <div className="mt-24 relative flex items-center justify-center">
+        {/* React to Audio Level effect waves */}
+        {isListening && (
+          <>
+            <div
+              className="absolute w-64 h-64 bg-black rounded-full opacity-10 transition-transform duration-75 ease-out"
+              style={{
+                transform: `scale(${1 + Math.min(audioLevel / 50, 0.15)})`,
+              }}
+            ></div>
+            <div
+              className="absolute w-64 h-64 border-2 border-black rounded-full opacity-10 transition-transform duration-75 ease-out"
+              style={{
+                transform: `scale(${1 + Math.min(audioLevel / 35, 0.3)})`,
+              }}
+            ></div>
+            <div
+              className="absolute w-64 h-64 border border-black rounded-full opacity-5 transition-transform duration-75 ease-out"
+              style={{
+                transform: `scale(${1 + Math.min(audioLevel / 20, 0.5)})`,
+              }}
+            ></div>
+          </>
+        )}
         <button
           onClick={handleMicClick}
-          className={`w-64 h-64 rounded-full flex items-center justify-center transition-all duration-300
-            ${isListening ? "bg-red-600 scale-105" : "bg-black"}
+          className={`relative z-10 w-64 h-64 rounded-full flex items-center justify-center transition-all duration-300
+            ${isListening ? "bg-gray-900 scale-[1.02] shadow-[0_0_20px_rgba(0,0,0,0.3)]" : "bg-black"}
             shadow-xl`}
         >
           <svg
@@ -89,11 +194,11 @@ export default function Home() {
       </div>
 
       {/* Transcript */}
-      {transcript && (
+      {/* {transcript && (
         <div className="mt-10 max-w-xl bg-white/70 backdrop-blur-md p-6 rounded-xl shadow-md">
           <p className="text-gray-800">{transcript}</p>
         </div>
-      )}
+      )} */}
 
       {/* Footer */}
       <footer className="absolute bottom-6 text-sm text-gray-700">
