@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import CallControls from "./components/CallControls";
 import HangOnButton from "./components/HangOnButton";
+import { Fragment } from "react";
+import { Transition } from "@headlessui/react";
+import PhoneNumberDialog from "./components/PhoneNumberDialog";
 
 declare global {
   interface Window {
@@ -13,8 +16,10 @@ declare global {
 
 export default function Home() {
   const [isListening, setIsListening] = useState(false);
+  const [isActiveCall, setActiveCall] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
+  const [isNumberDialogOpen, setNumberDialogOpen] = useState(false);
 
   const recognitionRef = useRef<any>(null);
 
@@ -144,37 +149,112 @@ export default function Home() {
     }
   };
 
+  const handleActiveCall = () => {
+    const phoneNo = sessionStorage.getItem("phone_no");
+    if (phoneNo === null) {
+      setNumberDialogOpen(true);
+      return;
+    }
+    setActiveCall(true);
+  };
+
+  const handleHangOn = (data: boolean) => {
+    setActiveCall(data);
+  };
+
+  const handlePhoneSubmit = (phone: string) => {
+    if (phone.length === 10) {
+      sessionStorage.setItem("phone_no", phone);
+      handleActiveCall();
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col justify-between bg-gradient-to-b from-[#B0EBFF] to-white text-center px-4">
-      {/* Title */}
-      <div className="pt-20">
-        <h1 className="text-3xl font-bold text-black">Call Center Agent</h1>
+    <>
+      <main className="flex min-h-screen flex-col justify-between bg-gradient-to-b from-[#B0EBFF] to-white text-center px-4">
+        {/* Title */}
+        <div className="pt-20">
+          <h1 className="text-3xl font-bold text-black">Call Center Agent</h1>
 
-        <p className="mt-3 text-xl text-gray-800">How can I help you today ?</p>
-      </div>
-
-      <div className="flex items-center justify-center">
-        <div className="flex flex-col gap-8 items-center">
-          <CallControls
-            isListening={isListening}
-            audioLevel={audioLevel}
-            onMicClick={handleMicClick}
-          />
-          <HangOnButton />
+          <p className="mt-3 text-xl text-gray-800">
+            How can I help you today ?
+          </p>
         </div>
-      </div>
 
-      {/* Transcript */}
-      {/* {transcript && (
+        <div className="flex items-center justify-center relative">
+          {/* Start Call Button */}
+          <Transition
+            as={Fragment}
+            show={!isActiveCall}
+            enter="transition ease-out duration-300"
+            enterFrom="opacity-0 scale-95"
+            enterTo="opacity-100 scale-100"
+            leave="transition ease-in duration-200"
+            leaveFrom="opacity-100 scale-100"
+            leaveTo="opacity-0 scale-95"
+          >
+            <div className="absolute flex items-center justify-center">
+              <button
+                onClick={handleActiveCall}
+                className="relative z-10 w-64 h-64 rounded-full flex items-center justify-center transition-all duration-300 bg-[#008E47] hover:bg-[#006231] shadow-xl"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="24px"
+                  viewBox="0 -960 960 960"
+                  width="24px"
+                  fill="#FFFFFF"
+                  className="w-24 h-24"
+                >
+                  <path d="M798-120q-125 0-247-54.5T329-329Q229-429 174.5-551T120-798q0-18 12-30t30-12h162q14 0 25 9.5t13 22.5l26 140q2 16-1 27t-11 19l-97 98q20 37 47.5 71.5T387-386q31 31 65 57.5t72 48.5l94-94q9-9 23.5-13.5T670-390l138 28q14 4 23 14.5t9 23.5v162q0 18-12 30t-30 12ZM241-600l66-66-17-94h-89q5 41 14 81t26 79Zm358 358q39 17 79.5 27t81.5 13v-88l-94-19-67 67ZM241-600Zm358 358Z" />
+                </svg>
+              </button>
+            </div>
+          </Transition>
+
+          {/* Active Call UI */}
+          <Transition
+            as={Fragment}
+            show={isActiveCall}
+            enter="transition ease-out duration-300"
+            enterFrom="opacity-0 scale-95"
+            enterTo="opacity-100 scale-100"
+            leave="transition ease-in duration-200"
+            leaveFrom="opacity-100 scale-100"
+            leaveTo="opacity-0 scale-95"
+          >
+            <div className="flex flex-col gap-8 items-center">
+              <CallControls
+                isListening={isListening}
+                audioLevel={audioLevel}
+                onMicClick={handleMicClick}
+              />
+              <div className="flex flex-col items-center gap-2">
+                <HangOnButton onHangOn={handleHangOn} />
+                <p className="text-sm text-gray-500">Session Id: 12DWD4W</p>
+              </div>
+            </div>
+          </Transition>
+        </div>
+
+        {/* Transcript */}
+        {/* {transcript && (
         <div className="mt-10 max-w-xl bg-white/70 backdrop-blur-md p-6 rounded-xl shadow-md">
           <p className="text-gray-800">{transcript}</p>
         </div>
       )} */}
 
-      {/* Footer */}
-      <footer className="pb-6 text-sm text-gray-700">
-        Powered by Call Center Automation Solution by Group 12
-      </footer>
-    </main>
+        {/* Footer */}
+        <footer className="pb-6 text-sm text-gray-700">
+          Powered by Call Center Automation Solution by Group 12
+        </footer>
+      </main>
+
+      <PhoneNumberDialog
+        isOpen={isNumberDialogOpen}
+        onClose={() => setNumberDialogOpen(false)}
+        onSubmit={handlePhoneSubmit}
+      />
+    </>
   );
 }

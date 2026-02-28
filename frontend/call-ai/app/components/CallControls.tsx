@@ -43,7 +43,7 @@ export default function CallControls({
           className={`relative z-10 w-64 h-64 rounded-full flex items-center justify-center transition-all duration-300
             ${
               isListening
-                ? "bg-gray-900 scale-[1.02] shadow-[0_0_20px_rgba(0,0,0,0.3)]"
+                ? "bg-black scale-[1.02] shadow-[0_0_20px_rgba(0,0,0,0.3)]"
                 : "bg-black"
             }
             shadow-xl`}
