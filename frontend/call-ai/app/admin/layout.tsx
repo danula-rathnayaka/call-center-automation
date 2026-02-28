@@ -7,8 +7,7 @@ export default function AdminLayout({
 }>) {
   return (
     <>
-      <NavBar />
-      <div className="pt-12 px-80 bg-neutral-50">{children}</div>
+      <div className="px-80 bg-neutral-50">{children}</div>
     </>
   );
 }
