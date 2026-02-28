@@ -36,7 +36,11 @@ export default function AdminPage() {
 
           <div className="flex gap-6">
             <ActionCard title="Calls" iconType="phone" href="/admin/calls" />
-            <ActionCard title="Documents" iconType="doc" href="/admin/docs" />
+            <ActionCard
+              title="Documents"
+              iconType="doc"
+              href="/admin/documents"
+            />
           </div>
         </div>
 
