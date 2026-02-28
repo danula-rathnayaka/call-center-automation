@@ -3,8 +3,13 @@
 import { useMemo } from "react";
 import { CallRow } from "../ui/CallRow";
 import { ActionCard } from "../ui/ActionCard";
+import { UserButton, useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 export default function AdminPage() {
+  const { user } = useUser();
+  const router = useRouter();
+
   const today = useMemo(() => {
     return new Date().toLocaleDateString("en-US", {
       weekday: "long",
@@ -21,13 +26,13 @@ export default function AdminPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Welcome back, Arosha</h1>
+            <h1 className="text-2xl font-bold">
+              Welcome back, {user?.firstName}
+            </h1>
             <p className="text-sm text-neutral-500 mt-1">{today}</p>
           </div>
 
-          <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-full font-semibold">
-            A
-          </div>
+          <UserButton afterSignOutUrl="/" />
         </div>
 
         {/* Quick Action*/}
