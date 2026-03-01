@@ -15,35 +15,47 @@ from multiagent_rag.state.rag_state import RAGState
 from multiagent_rag.tools.crm_tools import crm_tools
 from multiagent_rag.utils.interaction_logger import InteractionLogger
 from multiagent_rag.utils.logger import get_logger
+from multiagent_rag.utils.stt import STTEngine
 
 logger = get_logger(__name__)
 
-# ─── Shared Singletons ─────────────────────────────────────────────────────────
 _emotion_agent = EmotionAgent()
 _confidence_agent = ConfidenceAgent()
 _finetuned_llm = FinetunedLLMAgent()
+_stt_engine = STTEngine()
 _interaction_logger = InteractionLogger()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  NODE FUNCTIONS
-# ═══════════════════════════════════════════════════════════════════════════════
+def voice_processing_node(state: RAGState):
+    audio_path = state.get("audio_path", "")
+    query = state.get("query", "")
 
-def emotion_detector_node(state: RAGState):
-    """Detect the emotion of the incoming user query."""
-    query = state["query"]
-    logger.info("Running emotion detection on user query")
+    if audio_path:
+        logger.info("Processing voice input - STT + Emotion Detection")
 
-    result = _emotion_agent.detect(query)
+        transcribed_text = _stt_engine.transcribe(audio_path)
+        if not transcribed_text:
+            transcribed_text = query or "Unable to transcribe audio"
+            logger.warning("STT returned empty, using fallback text")
 
-    return {
-        "emotion": result.get("emotion", "neutral"),
-        "emotion_confidence": result.get("confidence", 0.0),
-    }
+        emotion_result = _emotion_agent.detect_from_audio(audio_path)
+
+        return {
+            "query": transcribed_text,
+            "emotion": emotion_result.get("emotion", "neutral"),
+            "emotion_confidence": emotion_result.get("confidence", 0.0),
+        }
+    else:
+        logger.info("Processing text input - keyword emotion detection")
+        emotion_result = _emotion_agent.detect_from_text(query)
+
+        return {
+            "emotion": emotion_result.get("emotion", "neutral"),
+            "emotion_confidence": emotion_result.get("confidence", 0.0),
+        }
 
 
 def route_query(state: RAGState):
-    """Route the user query to the appropriate processing pipeline."""
     query = state["query"]
     router = IntentRouter()
     intent = router.route(query)
@@ -62,7 +74,6 @@ def route_query(state: RAGState):
 
 
 def contextualize_node(state: RAGState):
-    """Reformulate the query using conversation history for better retrieval."""
     query = state["query"]
     history = state.get("chat_history", [])
 
@@ -72,12 +83,10 @@ def contextualize_node(state: RAGState):
     logger.info("Starting query contextualization")
     contextualizer = Contextualizer()
     new_query = contextualizer.reformulate(query, history)
-
     return {"reformulated_query": new_query, "intent": "technical"}
 
 
 def retrieve_node(state: RAGState):
-    """Retrieve relevant documents from the vector database."""
     query = state["reformulated_query"]
     logger.info(f"Starting document retrieval for query: {query}")
     retriever = Retriever()
@@ -86,33 +95,32 @@ def retrieve_node(state: RAGState):
 
 
 def generate_node(state: RAGState):
-    """Generate a response using the fine-tuned LLM (or fallback to Groq)."""
     query = state["query"]
     docs = state["retrieved_docs"]
     history = state.get("chat_history", [])
+    emotion = state.get("emotion", "neutral")
 
-    logger.info("Starting response generation")
+    logger.info(f"Starting emotion-aware response generation (emotion: {emotion})")
+
     retriever = Retriever()
     context_text = retriever.format_docs(docs)
 
-    # Use the fine-tuned LLM agent (falls back to Groq if not available)
-    answer = _finetuned_llm.generate(query, context_text, history)
+    answer = _finetuned_llm.generate(query, context_text, emotion, history)
 
     return {
         "final_answer": answer,
-        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)]
+        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
     }
 
 
 def casual_node(state: RAGState):
-    """Handle casual/greeting queries."""
     query = state["query"]
+    emotion = state.get("emotion", "neutral")
     generator = Generator()
-    answer = generator.generate(
-        query,
-        "User is normally chatting. Reply politely and warmly.",
-        state.get("chat_history", [])
-    )
+
+    emotion_hint = f"The customer's detected emotion is: {emotion}. "
+    context = emotion_hint + "User is normally chatting. Reply politely and warmly."
+    answer = generator.generate(query, context, state.get("chat_history", []))
 
     return {
         "final_answer": answer,
@@ -122,13 +130,11 @@ def casual_node(state: RAGState):
 
 
 def escalation_node(state: RAGState):
-    """Handle requests to speak with a human agent."""
     query = state["query"]
     answer = (
         "I understand you'd like to speak with a representative. "
         "I am transferring you to a human agent now. Please hold on..."
     )
-
     return {
         "final_answer": answer,
         "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
@@ -138,7 +144,6 @@ def escalation_node(state: RAGState):
 
 
 def tool_agent_node(state: RAGState):
-    """Invoke the CRM tool agent for customer service actions."""
     query = state["query"]
     history = state.get("chat_history", [])
 
@@ -154,32 +159,24 @@ def tool_agent_node(state: RAGState):
 
 
 def check_for_tool_calls(state: RAGState):
-    """Check if the tool agent wants to call any tools."""
     history = state.get("chat_history", [])
     if not history:
         return "__end__"
 
     last_message = history[-1]
-
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"
-
     return "__end__"
 
 
 def confidence_evaluator_node(state: RAGState):
-    """Evaluate the confidence of the generated response."""
     query = state.get("query", "")
     response = state.get("final_answer", "")
-    docs = state.get("retrieved_docs", [])
+    retrieved_docs = state.get("retrieved_docs", [])
+    emotion = state.get("emotion", "neutral")
 
-    # Build context text from retrieved docs
-    context_text = ""
-    for doc in docs:
-        context_text += doc.get("content", "") + "\n"
-
-    logger.info("Running confidence evaluation on generated response")
-    result = _confidence_agent.evaluate(query, response, context_text)
+    logger.info("Running confidence evaluation")
+    result = _confidence_agent.evaluate(query, response, retrieved_docs, emotion)
 
     return {
         "response_confidence": result.get("confidence_score", 0.5),
@@ -188,7 +185,6 @@ def confidence_evaluator_node(state: RAGState):
 
 
 def interaction_logger_node(state: RAGState):
-    """Log the complete interaction for transparency and analysis."""
     session_id = state.get("session_id", "unknown")
 
     _interaction_logger.log_interaction(
@@ -202,18 +198,12 @@ def interaction_logger_node(state: RAGState):
         intent=state.get("intent", "unknown"),
         retrieved_docs_count=len(state.get("retrieved_docs", [])),
     )
-
     return {"status": "completed"}
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  GRAPH ASSEMBLY
-# ═══════════════════════════════════════════════════════════════════════════════
-
 workflow = StateGraph(RAGState)
 
-# ── Register all nodes ──────────────────────────────────────────────────────────
-workflow.add_node("emotion_detector", emotion_detector_node)
+workflow.add_node("voice_processor", voice_processing_node)
 workflow.add_node("contextualizer", contextualize_node)
 workflow.add_node("retriever", retrieve_node)
 workflow.add_node("generator", generate_node)
@@ -224,12 +214,10 @@ workflow.add_node("escalator", escalation_node)
 workflow.add_node("confidence_evaluator", confidence_evaluator_node)
 workflow.add_node("interaction_logger", interaction_logger_node)
 
-# ── Entry point: always start with emotion detection ────────────────────────────
-workflow.set_entry_point("emotion_detector")
+workflow.set_entry_point("voice_processor")
 
-# ── After emotion detection → route by intent ──────────────────────────────────
 workflow.add_conditional_edges(
-    "emotion_detector",
+    "voice_processor",
     route_query,
     {
         "contextualizer": "contextualizer",
@@ -239,12 +227,10 @@ workflow.add_conditional_edges(
     }
 )
 
-# ── Technical path: contextualize → retrieve → generate ────────────────────────
 workflow.add_edge("contextualizer", "retriever")
 workflow.add_edge("retriever", "generator")
 workflow.add_edge("generator", "confidence_evaluator")
 
-# ── Tool agent path: tool_agent → (tools loop or end) ─────────────────────────
 workflow.add_conditional_edges(
     "tool_agent",
     check_for_tool_calls,
@@ -255,14 +241,11 @@ workflow.add_conditional_edges(
 )
 workflow.add_edge("tools", "tool_agent")
 
-# ── Casual & escalation → confidence evaluator ────────────────────────────────
 workflow.add_edge("casual_responder", "confidence_evaluator")
 workflow.add_edge("escalator", "confidence_evaluator")
 
-# ── Confidence evaluator → interaction logger → END ───────────────────────────
 workflow.add_edge("confidence_evaluator", "interaction_logger")
 workflow.add_edge("interaction_logger", END)
 
-# ── Compile with memory checkpointer ─────────────────────────────────────────
 memory = MemorySaver()
 rag_app = workflow.compile(checkpointer=memory)

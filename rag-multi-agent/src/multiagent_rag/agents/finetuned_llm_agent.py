@@ -7,27 +7,12 @@ logger = get_logger(__name__)
 
 
 class FinetunedLLMAgent:
-    """
-    Integration agent for the Fine-tuned LLM.
-
-    This agent wraps the fine-tuned LLM's inference pipeline for generating
-    customer service responses. When not available, it falls back to the
-    existing Groq-based Generator.
-
-    Expected inference pipeline location:
-        finetuned-LLM/inference.py -> generate(query, context, history) -> str
-
-    To integrate the real model:
-        Update the _call_inference_pipeline() method to import and call
-        the actual inference function from the finetuned-LLM component.
-    """
 
     def __init__(self):
         self._pipeline_available = self._check_pipeline()
         self._fallback_generator = None
 
     def _check_pipeline(self) -> bool:
-        """Check if the fine-tuned LLM inference pipeline is available."""
         try:
             project_root = os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -45,63 +30,78 @@ class FinetunedLLMAgent:
             logger.warning(
                 "Fine-tuned LLM inference pipeline not available. Using Groq fallback. "
                 "To enable: create finetuned-LLM/inference.py with "
-                "generate(query, context, history) -> str"
+                "generate(query, context, emotion, history) -> str"
             )
             return False
 
     def _get_fallback_generator(self):
-        """Lazy-load the fallback Generator to avoid circular imports."""
         if self._fallback_generator is None:
             from multiagent_rag.agents.generator import Generator
             self._fallback_generator = Generator()
         return self._fallback_generator
 
-    def generate(self, query: str, context: str, history: list) -> str:
-        """
-        Generate a response using the fine-tuned LLM.
-
-        Args:
-            query: The user's question
-            context: Retrieved knowledge context
-            history: Conversation history (list of BaseMessage)
-
-        Returns:
-            str: The generated response text
-        """
+    def generate(self, query: str, context: str, emotion: str, history: list) -> str:
         try:
             if self._pipeline_available:
-                return self._call_inference_pipeline(query, context, history)
+                return self._call_inference_pipeline(query, context, emotion, history)
             else:
-                return self._fallback_generate(query, context, history)
+                return self._fallback_generate(query, context, emotion, history)
         except Exception as e:
             logger.error(f"Fine-tuned LLM generation failed: {str(e)}")
-            return self._fallback_generate(query, context, history)
+            return self._fallback_generate(query, context, emotion, history)
 
-    def _call_inference_pipeline(self, query: str, context: str, history: list) -> str:
-        """
-        Call the real fine-tuned LLM inference pipeline.
-
-        When the finetuned-LLM team provides their inference.py,
-        this method will use it automatically.
-        """
+    def _call_inference_pipeline(self, query: str, context: str, emotion: str, history: list) -> str:
         try:
-            # Convert LangChain message history to a simple format for the inference pipeline
             simple_history = []
             for msg in history:
                 role = "user" if msg.type == "human" else "assistant"
                 simple_history.append({"role": role, "content": msg.content})
 
-            result = self._generate_fn(query, context, simple_history)
+            result = self._generate_fn(query, context, emotion, simple_history)
             return str(result)
         except Exception as e:
             logger.error(f"Fine-tuned LLM inference pipeline error: {str(e)}")
-            return self._fallback_generate(query, context, history)
+            return self._fallback_generate(query, context, emotion, history)
 
-    def _fallback_generate(self, query: str, context: str, history: list) -> str:
-        """
-        Fallback: use the existing Groq-based Generator.
-        This ensures the system always works even without the fine-tuned model.
-        """
-        logger.info("Using Groq Generator as fallback for fine-tuned LLM")
+    def _fallback_generate(self, query: str, context: str, emotion: str, history: list) -> str:
+        logger.info(f"Using Groq Generator as fallback (emotion: {emotion})")
         generator = self._get_fallback_generator()
-        return generator.generate(query, context, history)
+
+        emotion_context = self._build_emotion_context(emotion)
+        enriched_context = f"{emotion_context}\n\n{context}"
+
+        return generator.generate(query, enriched_context, history)
+
+    def _build_emotion_context(self, emotion: str) -> str:
+        emotion_instructions = {
+            "angry": (
+                "[CUSTOMER EMOTION: Angry] "
+                "The customer is upset. Respond with extra empathy, acknowledge their frustration, "
+                "apologize sincerely, and provide a clear solution. Use a calm, reassuring tone."
+            ),
+            "frustrated": (
+                "[CUSTOMER EMOTION: Frustrated] "
+                "The customer is frustrated. Show understanding, validate their experience, "
+                "and focus on resolving their issue step by step. Be patient and supportive."
+            ),
+            "happy": (
+                "[CUSTOMER EMOTION: Happy] "
+                "The customer is in a positive mood. Match their energy, be warm and friendly, "
+                "and ensure they leave even more satisfied."
+            ),
+            "sad": (
+                "[CUSTOMER EMOTION: Sad] "
+                "The customer seems disappointed. Show genuine empathy, be gentle in your response, "
+                "and focus on how you can help improve their situation."
+            ),
+            "worried": (
+                "[CUSTOMER EMOTION: Worried] "
+                "The customer is anxious or concerned. Reassure them, provide clear information, "
+                "and help them feel confident that their issue will be resolved."
+            ),
+            "neutral": (
+                "[CUSTOMER EMOTION: Neutral] "
+                "The customer's tone is neutral. Respond professionally and helpfully."
+            ),
+        }
+        return emotion_instructions.get(emotion, emotion_instructions["neutral"])

@@ -8,13 +8,8 @@ logger = get_logger(__name__)
 
 
 class InteractionLogger:
-    """
-    Logs all RAG interactions (queries, responses, emotions, confidence scores)
-    to a JSON lines file for transparency and future performance analysis.
-    """
 
     def __init__(self):
-        # Resolve logs directory relative to the project root
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         )
@@ -34,20 +29,6 @@ class InteractionLogger:
         intent: str = "unknown",
         retrieved_docs_count: int = 0,
     ):
-        """
-        Log a single interaction to the JSONL file.
-
-        Args:
-            session_id: Unique session identifier
-            query: The user's original query
-            response: The generated response
-            emotion: Detected emotion of the query
-            emotion_confidence: Confidence of emotion detection
-            response_confidence: Confidence score of the response
-            should_escalate: Whether the system recommends human escalation
-            intent: The classified intent (technical, casual, etc.)
-            retrieved_docs_count: Number of documents retrieved
-        """
         entry = {
             "timestamp": datetime.utcnow().isoformat(),
             "session_id": session_id,
@@ -69,15 +50,6 @@ class InteractionLogger:
             logger.error(f"Failed to log interaction: {str(e)}")
 
     def get_session_history(self, session_id: str) -> list:
-        """
-        Retrieve all logged interactions for a specific session.
-
-        Args:
-            session_id: The session ID to filter by
-
-        Returns:
-            List of interaction dicts for the given session, ordered by timestamp
-        """
         interactions = []
         try:
             if not os.path.exists(self._log_file):
@@ -97,15 +69,6 @@ class InteractionLogger:
         return interactions
 
     def get_all_logs(self, limit: int = 100) -> list:
-        """
-        Retrieve the most recent interaction logs.
-
-        Args:
-            limit: Maximum number of entries to return (most recent first)
-
-        Returns:
-            List of interaction dicts, ordered by most recent first
-        """
         interactions = []
         try:
             if not os.path.exists(self._log_file):
@@ -118,7 +81,6 @@ class InteractionLogger:
                         continue
                     interactions.append(json.loads(line))
 
-            # Return most recent first
             return interactions[-limit:][::-1]
         except Exception as e:
             logger.error(f"Failed to read interaction logs: {str(e)}")

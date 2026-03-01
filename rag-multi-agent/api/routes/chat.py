@@ -1,8 +1,13 @@
+import os
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from api.schemas import ChatRequest, ChatResponse, SessionHistoryResponse, SessionMessage
+from api.schemas import (
+    ChatRequest, ChatResponse,
+    RetrievedChunk, EmotionResult, ConfidenceResult,
+    SessionHistoryResponse, SessionMessage,
+)
 from multiagent_rag.graph.rag_workflow import rag_app
 from multiagent_rag.utils.interaction_logger import InteractionLogger
 from multiagent_rag.utils.logger import get_logger
@@ -12,21 +17,39 @@ router = APIRouter(prefix="/api/chat", tags=["Chat"])
 
 _interaction_logger = InteractionLogger()
 
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_voice_upload_dir = os.path.join(_project_root, "data", "voice_uploads")
+os.makedirs(_voice_upload_dir, exist_ok=True)
+
+
+def _build_response(result: dict, session_id: str, transcribed_text: str = "") -> ChatResponse:
+    retrieved_chunks = []
+    for doc in result.get("retrieved_docs", []):
+        retrieved_chunks.append(RetrievedChunk(
+            content=doc.get("content", ""),
+            source=doc.get("metadata", {}).get("source", ""),
+            chunk_type=doc.get("metadata", {}).get("type", ""),
+        ))
+
+    return ChatResponse(
+        response=result.get("final_answer", ""),
+        session_id=session_id,
+        transcribed_text=transcribed_text,
+        emotion=EmotionResult(
+            emotion=result.get("emotion", "neutral"),
+            confidence=result.get("emotion_confidence", 0.0),
+        ),
+        intent=result.get("intent", "unknown"),
+        retrieved_chunks=retrieved_chunks,
+        confidence=ConfidenceResult(
+            score=result.get("response_confidence", 0.0),
+            should_escalate=result.get("should_escalate", False),
+        ),
+    )
+
 
 @router.post("", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """
-    Send a query to the multi-agent RAG system and get a response.
-
-    The system will:
-    1. Detect the emotion of the query
-    2. Route to the appropriate agent (technical, customer service, casual, escalation)
-    3. Generate a response using RAG or tools
-    4. Evaluate response confidence
-    5. Log the interaction
-
-    If no session_id is provided, one will be auto-generated.
-    """
     session_id = request.session_id or str(uuid.uuid4())
 
     try:
@@ -35,34 +58,64 @@ async def chat(request: ChatRequest):
         result = rag_app.invoke(
             {
                 "query": request.query,
+                "audio_path": "",
                 "session_id": session_id,
             },
             config=config,
         )
 
-        return ChatResponse(
-            response=result.get("final_answer", ""),
-            session_id=session_id,
-            emotion=result.get("emotion", "neutral"),
-            emotion_confidence=result.get("emotion_confidence", 0.0),
-            confidence_score=result.get("response_confidence", 0.0),
-            should_escalate=result.get("should_escalate", False),
-            intent=result.get("intent", "unknown"),
-        )
+        return _build_response(result, session_id, transcribed_text="")
 
     except Exception as e:
         logger.error(f"Chat endpoint error: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process query: {str(e)}"
+        raise HTTPException(status_code=500, detail=f"Failed to process query: {str(e)}")
+
+
+@router.post("/voice", response_model=ChatResponse)
+async def chat_voice(
+    audio: UploadFile = File(...),
+    session_id: str = None,
+):
+    session_id = session_id or str(uuid.uuid4())
+
+    try:
+        filename = audio.filename or f"voice_{uuid.uuid4()}.wav"
+        audio_path = os.path.join(_voice_upload_dir, f"{uuid.uuid4()}_{filename}")
+
+        with open(audio_path, "wb") as f:
+            content = await audio.read()
+            f.write(content)
+
+        logger.info(f"Voice file saved: {audio_path} ({len(content)} bytes)")
+
+        config = {"configurable": {"thread_id": session_id}}
+
+        result = rag_app.invoke(
+            {
+                "query": "",
+                "audio_path": audio_path,
+                "session_id": session_id,
+            },
+            config=config,
         )
+
+        transcribed_text = result.get("query", "")
+        response = _build_response(result, session_id, transcribed_text=transcribed_text)
+
+        try:
+            os.remove(audio_path)
+        except Exception:
+            pass
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Voice chat endpoint error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process voice: {str(e)}")
 
 
 @router.get("/history/{session_id}", response_model=SessionHistoryResponse)
 async def get_session_history(session_id: str):
-    """
-    Retrieve the conversation history for a specific session.
-    """
     try:
         history = _interaction_logger.get_session_history(session_id)
 
@@ -84,7 +137,4 @@ async def get_session_history(session_id: str):
 
     except Exception as e:
         logger.error(f"Session history retrieval error: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve session history: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve session history: {str(e)}")
