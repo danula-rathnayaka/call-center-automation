@@ -1,4 +1,5 @@
 import os
+from langchain_core.messages import AIMessage
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -35,4 +36,4 @@ class ToolAgent:
             })
         except Exception as e:
             logger.error(f"Tool agent invocation failed: {str(e)}")
-            return "System Error"
+            return AIMessage(content="I'm sorry, I encountered a system error. Please try again.")

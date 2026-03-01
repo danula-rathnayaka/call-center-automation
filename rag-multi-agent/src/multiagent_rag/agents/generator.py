@@ -19,7 +19,8 @@ class Generator:
             max_tokens=1024
         )
 
-        with open(os.path.join("src", "prompts", "rag_prompt.txt"), "r", encoding="utf-8") as f:
+        _prompts_dir = os.path.join(os.path.dirname(__file__), "..", "..", "prompts")
+        with open(os.path.join(_prompts_dir, "rag_prompt.txt"), "r", encoding="utf-8") as f:
             template_text = f.read()
 
         self.prompt = ChatPromptTemplate.from_messages([

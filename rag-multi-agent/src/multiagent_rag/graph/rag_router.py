@@ -21,7 +21,8 @@ class IntentRouter:
 
         self.parser = PydanticOutputParser(pydantic_object=RouteResponse)
 
-        prompt_path = os.path.join("src", "prompts", "rag_router_prompt.txt")
+        _prompts_dir = os.path.join(os.path.dirname(__file__), "..", "..", "prompts")
+        prompt_path = os.path.join(_prompts_dir, "rag_router_prompt.txt")
         if not os.path.exists(prompt_path):
             raise FileNotFoundError(f"Prompt file not found at: {prompt_path}")
 
