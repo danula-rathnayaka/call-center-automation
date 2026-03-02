@@ -29,6 +29,7 @@ HOW YOUR FRIEND USES THIS FILE:
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
+import os  
 
 
 # ── 2. CONFIG ────────────────────────────────────────────────────────────────
