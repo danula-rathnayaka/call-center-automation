@@ -51,17 +51,17 @@ tokenizer = None
 
 
 # ── 5. PROMPT FORMATTER (must match training format exactly — do not change!) ─
-def format_prompt(customer_query: str, emotion: str, facts: str) -> str:
-    user_message = f"""Customer emotional state: {emotion}
-
-Facts:
-{facts}
-
-Customer inquiry: {customer_query}"""
-
+def format_prompt(customer_query: str, emotion: str, facts: str, history: list = None) -> str:
+    history_str = "\n".join(history) if history else "No previous turns."
+    user_content = (
+        f"Emotional State: {emotion}\n"
+        f"Facts: {facts}\n"
+        f"Conversation History:\n{history_str}\n"
+        f"User: {customer_query}"
+    )
     prompt = (
         f"<s>[INST] <<SYS>>\n{SYSTEM_PROMPT}\n<</SYS>>\n\n"
-        f"{user_message} [/INST]"
+        f"{user_content} [/INST]"
     )
     return prompt
 
@@ -130,8 +130,7 @@ def generate_response(
     if model is None or tokenizer is None:
         raise RuntimeError("Model not loaded. Please call initialize() first.")
 
-    prompt = format_prompt(customer_query, emotion, facts)
-
+    prompt = format_prompt(customer_query, emotion, facts)  # same — no change needed here
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
     with torch.no_grad():
