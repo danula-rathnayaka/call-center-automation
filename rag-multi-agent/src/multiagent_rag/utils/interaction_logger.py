@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from multiagent_rag.utils.logger import get_logger
 
@@ -28,9 +28,10 @@ class InteractionLogger:
         should_escalate: bool = False,
         intent: str = "unknown",
         retrieved_docs_count: int = 0,
+        latency_ms: dict = None,
     ):
         entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": session_id,
             "query": query,
             "response": response,
@@ -40,6 +41,7 @@ class InteractionLogger:
             "should_escalate": should_escalate,
             "intent": intent,
             "retrieved_docs_count": retrieved_docs_count,
+            "latency_ms": latency_ms or {},
         }
 
         try:

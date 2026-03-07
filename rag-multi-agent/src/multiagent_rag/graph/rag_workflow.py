@@ -1,5 +1,9 @@
+import os
+import sqlite3
+import time
+
 from langchain_core.messages import HumanMessage, AIMessage
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 
@@ -8,7 +12,11 @@ from multiagent_rag.agents.confidence_agent import ConfidenceAgent
 from multiagent_rag.agents.emotion_agent import EmotionAgent
 from multiagent_rag.agents.finetuned_llm_agent import FinetunedLLMAgent
 from multiagent_rag.agents.generator import Generator
+from multiagent_rag.agents.guardrail import Guardrail
+from multiagent_rag.agents.query_decomposer import QueryDecomposer
+from multiagent_rag.agents.reranker import Reranker
 from multiagent_rag.agents.retriever import Retriever
+from multiagent_rag.agents.summarizer import ConversationSummarizer
 from multiagent_rag.agents.tool_agent import ToolAgent
 from multiagent_rag.graph.rag_router import IntentRouter
 from multiagent_rag.state.rag_state import RAGState
@@ -24,9 +32,19 @@ _confidence_agent = ConfidenceAgent()
 _finetuned_llm = FinetunedLLMAgent()
 _stt_engine = STTEngine()
 _interaction_logger = InteractionLogger()
+_router = IntentRouter()
+_contextualizer = Contextualizer()
+_retriever = Retriever()
+_generator = Generator()
+_reranker = Reranker()
+_guardrail = Guardrail()
+_query_decomposer = QueryDecomposer()
+_summarizer = ConversationSummarizer()
+_tool_agent = ToolAgent()
 
 
 def voice_processing_node(state: RAGState):
+    start = time.time()
     audio_path = state.get("audio_path", "")
     query = state.get("query", "")
 
@@ -40,25 +58,61 @@ def voice_processing_node(state: RAGState):
 
         emotion_result = _emotion_agent.detect_from_audio(audio_path)
 
+        elapsed = round((time.time() - start) * 1000)
         return {
             "query": transcribed_text,
             "emotion": emotion_result.get("emotion", "neutral"),
             "emotion_confidence": emotion_result.get("confidence", 0.0),
+            "latency_ms": {"voice_processing": elapsed},
         }
     else:
         logger.info("Processing text input - keyword emotion detection")
         emotion_result = _emotion_agent.detect_from_text(query)
 
+        elapsed = round((time.time() - start) * 1000)
         return {
             "emotion": emotion_result.get("emotion", "neutral"),
             "emotion_confidence": emotion_result.get("confidence", 0.0),
+            "latency_ms": {"voice_processing": elapsed},
         }
 
 
-def route_query(state: RAGState):
+def history_summarizer_node(state: RAGState):
+    start = time.time()
+    history = state.get("chat_history", [])
+
+    if len(history) > 4:
+        summarized = _summarizer.summarize(history, keep_recent=4)
+        elapsed = round((time.time() - start) * 1000)
+        return {
+            "chat_history": summarized,
+            "latency_ms": {"history_summarizer": elapsed},
+        }
+
+    elapsed = round((time.time() - start) * 1000)
+    return {"latency_ms": {"history_summarizer": elapsed}}
+
+
+def guardrail_node(state: RAGState):
+    start = time.time()
     query = state["query"]
-    router = IntentRouter()
-    intent = router.route(query)
+
+    result = _guardrail.validate(query)
+    elapsed = round((time.time() - start) * 1000)
+
+    return {
+        "guardrail_passed": result["safe"],
+        "latency_ms": {"guardrail": elapsed},
+    }
+
+
+def route_after_guardrail(state: RAGState):
+    if not state.get("guardrail_passed", True):
+        return "blocked_response"
+
+    query = state["query"]
+    history = state.get("chat_history", [])
+    intent = _router.route(query, history)
     logger.info(f"Query routed with intent: {intent}")
 
     if intent == "technical":
@@ -73,28 +127,100 @@ def route_query(state: RAGState):
         return "contextualizer"
 
 
+def blocked_response_node(state: RAGState):
+    query = state["query"]
+    answer = (
+        "I apologize, but I am unable to process that request. "
+        "Please rephrase your question related to our telecom services, "
+        "and I will be happy to assist you."
+    )
+    return {
+        "final_answer": answer,
+        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
+        "intent": "blocked",
+    }
+
+
+
+
+
 def contextualize_node(state: RAGState):
+    start = time.time()
     query = state["query"]
     history = state.get("chat_history", [])
 
     if not history:
-        return {"reformulated_query": query, "intent": "technical"}
+        elapsed = round((time.time() - start) * 1000)
+        return {
+            "reformulated_query": query,
+            "intent": "technical",
+            "latency_ms": {"contextualizer": elapsed},
+        }
 
     logger.info("Starting query contextualization")
-    contextualizer = Contextualizer()
-    new_query = contextualizer.reformulate(query, history)
-    return {"reformulated_query": new_query, "intent": "technical"}
+    new_query = _contextualizer.reformulate(query, history)
+    elapsed = round((time.time() - start) * 1000)
+    return {
+        "reformulated_query": new_query,
+        "intent": "technical",
+        "latency_ms": {"contextualizer": elapsed},
+    }
+
+
+def query_decomposer_node(state: RAGState):
+    start = time.time()
+    query = state["reformulated_query"]
+
+    sub_queries = _query_decomposer.decompose(query)
+    elapsed = round((time.time() - start) * 1000)
+    return {
+        "sub_queries": sub_queries,
+        "latency_ms": {"query_decomposer": elapsed},
+    }
 
 
 def retrieve_node(state: RAGState):
-    query = state["reformulated_query"]
-    logger.info(f"Starting document retrieval for query: {query}")
-    retriever = Retriever()
-    docs = retriever.retrieve(query)
-    return {"retrieved_docs": docs}
+    start = time.time()
+    sub_queries = state.get("sub_queries", [])
+    query = state.get("reformulated_query", state["query"])
+
+    if not sub_queries:
+        sub_queries = [query]
+
+    all_docs = []
+    seen_contents = set()
+
+    for sq in sub_queries:
+        logger.info(f"Retrieving documents for sub-query: {sq}")
+        docs = _retriever.retrieve(sq)
+        for doc in docs:
+            content_key = doc["content"][:100]
+            if content_key not in seen_contents:
+                seen_contents.add(content_key)
+                all_docs.append(doc)
+
+    elapsed = round((time.time() - start) * 1000)
+    return {
+        "retrieved_docs": all_docs,
+        "latency_ms": {"retriever": elapsed},
+    }
+
+
+def reranker_node(state: RAGState):
+    start = time.time()
+    query = state.get("reformulated_query", state["query"])
+    docs = state["retrieved_docs"]
+
+    reranked = _reranker.rerank(query, docs, top_k=3)
+    elapsed = round((time.time() - start) * 1000)
+    return {
+        "retrieved_docs": reranked,
+        "latency_ms": {"reranker": elapsed},
+    }
 
 
 def generate_node(state: RAGState):
+    start = time.time()
     query = state["query"]
     docs = state["retrieved_docs"]
     history = state.get("chat_history", [])
@@ -102,30 +228,34 @@ def generate_node(state: RAGState):
 
     logger.info(f"Starting emotion-aware response generation (emotion: {emotion})")
 
-    retriever = Retriever()
-    context_text = retriever.format_docs(docs)
+    context_text = _retriever.format_docs(docs)
 
     answer = _finetuned_llm.generate(query, context_text, emotion, history)
+    answer = _guardrail.sanitize_response(answer)
 
+    elapsed = round((time.time() - start) * 1000)
     return {
         "final_answer": answer,
         "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
+        "latency_ms": {"generator": elapsed},
     }
 
 
 def casual_node(state: RAGState):
+    start = time.time()
     query = state["query"]
     emotion = state.get("emotion", "neutral")
-    generator = Generator()
 
     emotion_hint = f"The customer's detected emotion is: {emotion}. "
     context = emotion_hint + "User is normally chatting. Reply politely and warmly."
-    answer = generator.generate(query, context, state.get("chat_history", []))
+    answer = _generator.generate(query, context, state.get("chat_history", []))
 
+    elapsed = round((time.time() - start) * 1000)
     return {
         "final_answer": answer,
         "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
         "intent": "casual",
+        "latency_ms": {"casual_responder": elapsed},
     }
 
 
@@ -144,17 +274,19 @@ def escalation_node(state: RAGState):
 
 
 def tool_agent_node(state: RAGState):
+    start = time.time()
     query = state["query"]
     history = state.get("chat_history", [])
 
     logger.info("Invoking tool agent")
-    agent = ToolAgent()
-    response = agent.invoke(query, history)
+    response = _tool_agent.invoke(query, history)
 
+    elapsed = round((time.time() - start) * 1000)
     return {
         "chat_history": [HumanMessage(content=query), response],
         "final_answer": response.content,
         "intent": "customer_service",
+        "latency_ms": {"tool_agent": elapsed},
     }
 
 
@@ -170,6 +302,7 @@ def check_for_tool_calls(state: RAGState):
 
 
 def confidence_evaluator_node(state: RAGState):
+    start = time.time()
     query = state.get("query", "")
     response = state.get("final_answer", "")
     retrieved_docs = state.get("retrieved_docs", [])
@@ -178,9 +311,11 @@ def confidence_evaluator_node(state: RAGState):
     logger.info("Running confidence evaluation")
     result = _confidence_agent.evaluate(query, response, retrieved_docs, emotion)
 
+    elapsed = round((time.time() - start) * 1000)
     return {
         "response_confidence": result.get("confidence_score", 0.5),
         "should_escalate": result.get("should_escalate", False),
+        "latency_ms": {"confidence_evaluator": elapsed},
     }
 
 
@@ -197,6 +332,7 @@ def interaction_logger_node(state: RAGState):
         should_escalate=state.get("should_escalate", False),
         intent=state.get("intent", "unknown"),
         retrieved_docs_count=len(state.get("retrieved_docs", [])),
+        latency_ms=state.get("latency_ms", {}),
     )
     return {"status": "completed"}
 
@@ -204,8 +340,13 @@ def interaction_logger_node(state: RAGState):
 workflow = StateGraph(RAGState)
 
 workflow.add_node("voice_processor", voice_processing_node)
+workflow.add_node("history_summarizer", history_summarizer_node)
+workflow.add_node("guardrail", guardrail_node)
+workflow.add_node("blocked_response", blocked_response_node)
 workflow.add_node("contextualizer", contextualize_node)
+workflow.add_node("query_decomposer", query_decomposer_node)
 workflow.add_node("retriever", retrieve_node)
+workflow.add_node("reranker", reranker_node)
 workflow.add_node("generator", generate_node)
 workflow.add_node("tool_agent", tool_agent_node)
 workflow.add_node("tools", ToolNode(crm_tools, messages_key="chat_history"))
@@ -216,19 +357,25 @@ workflow.add_node("interaction_logger", interaction_logger_node)
 
 workflow.set_entry_point("voice_processor")
 
+workflow.add_edge("voice_processor", "history_summarizer")
+workflow.add_edge("history_summarizer", "guardrail")
+
 workflow.add_conditional_edges(
-    "voice_processor",
-    route_query,
+    "guardrail",
+    route_after_guardrail,
     {
         "contextualizer": "contextualizer",
         "tool_agent": "tool_agent",
         "casual_responder": "casual_responder",
         "escalator": "escalator",
+        "blocked_response": "blocked_response",
     }
 )
 
-workflow.add_edge("contextualizer", "retriever")
-workflow.add_edge("retriever", "generator")
+workflow.add_edge("contextualizer", "query_decomposer")
+workflow.add_edge("query_decomposer", "retriever")
+workflow.add_edge("retriever", "reranker")
+workflow.add_edge("reranker", "generator")
 workflow.add_edge("generator", "confidence_evaluator")
 
 workflow.add_conditional_edges(
@@ -243,9 +390,16 @@ workflow.add_edge("tools", "tool_agent")
 
 workflow.add_edge("casual_responder", "confidence_evaluator")
 workflow.add_edge("escalator", "confidence_evaluator")
+workflow.add_edge("blocked_response", "confidence_evaluator")
 
 workflow.add_edge("confidence_evaluator", "interaction_logger")
 workflow.add_edge("interaction_logger", END)
 
-memory = MemorySaver()
+_checkpoint_dir = os.path.join(
+    os.path.dirname(__file__), "..", "..", "..", "data"
+)
+os.makedirs(_checkpoint_dir, exist_ok=True)
+_checkpoint_path = os.path.join(_checkpoint_dir, "checkpoints.db")
+_conn = sqlite3.connect(_checkpoint_path, check_same_thread=False)
+memory = SqliteSaver(_conn)
 rag_app = workflow.compile(checkpointer=memory)
