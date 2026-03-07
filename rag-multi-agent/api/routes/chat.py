@@ -1,7 +1,10 @@
+import asyncio
+import json
 import os
 import uuid
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 
 from api.schemas import (
     ChatRequest, ChatResponse,
@@ -45,6 +48,7 @@ def _build_response(result: dict, session_id: str, transcribed_text: str = "") -
             score=result.get("response_confidence", 0.0),
             should_escalate=result.get("should_escalate", False),
         ),
+        latency_ms=result.get("latency_ms", {}),
     )
 
 
@@ -112,6 +116,58 @@ async def chat_voice(
     except Exception as e:
         logger.error(f"Voice chat endpoint error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to process voice: {str(e)}")
+
+
+@router.post("/stream")
+async def chat_stream(request: ChatRequest):
+    session_id = request.session_id or str(uuid.uuid4())
+
+    async def event_generator():
+        try:
+            config = {"configurable": {"thread_id": session_id}}
+            input_data = {
+                "query": request.query,
+                "audio_path": "",
+                "session_id": session_id,
+            }
+
+            async for event in rag_app.astream_events(input_data, config=config, version="v2"):
+                event_name = event.get("event", "")
+
+                if event_name == "on_chat_model_stream":
+                    chunk = event.get("data", {}).get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        payload = json.dumps({"type": "token", "content": chunk.content})
+                        yield f"data: {payload}\n\n"
+
+                elif event_name == "on_chain_end" and event.get("name") == "LangGraph":
+                    output = event.get("data", {}).get("output", {})
+                    final_payload = json.dumps({
+                        "type": "done",
+                        "session_id": session_id,
+                        "emotion": output.get("emotion", "neutral"),
+                        "intent": output.get("intent", "unknown"),
+                        "confidence": output.get("response_confidence", 0.0),
+                        "should_escalate": output.get("should_escalate", False),
+                        "latency_ms": output.get("latency_ms", {}),
+                    })
+                    yield f"data: {final_payload}\n\n"
+
+        except asyncio.CancelledError:
+            logger.info(f"Stream cancelled for session {session_id}")
+        except Exception as e:
+            logger.error(f"Streaming error: {str(e)}")
+            error_payload = json.dumps({"type": "error", "message": str(e)})
+            yield f"data: {error_payload}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/history/{session_id}", response_model=SessionHistoryResponse)
