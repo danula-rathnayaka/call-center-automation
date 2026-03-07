@@ -1,3 +1,4 @@
+import hashlib
 import os
 
 from docx import Document
@@ -8,11 +9,12 @@ from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 class DocIngestor(BaseIngestor):
     def __init__(self):
         self.chunker = Chunker()
 
-    def process(self, file_path: str) -> list:
+    def process(self, file_path: str) -> tuple:
         try:
             doc = Document(file_path)
             full_text = []
@@ -30,17 +32,26 @@ class DocIngestor(BaseIngestor):
             combined_text = "\n".join(full_text)
 
             if not combined_text.strip():
-                return []
+                return [], ""
+
+            doc_hash = self._compute_hash(file_path)
 
             metadata = {
                 "source": os.path.basename(file_path),
-                "type": "docx"
+                "type": "docx",
+                "document_hash": doc_hash,
             }
 
             chunks = self.chunker.split_text(combined_text, metadata)
-
-            return chunks
+            return chunks, doc_hash
 
         except Exception as e:
             logger.error(f"Failed to process DOCX file {file_path}: {str(e)}")
-            return []
+            return [], ""
+
+    def _compute_hash(self, file_path: str) -> str:
+        sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for block in iter(lambda: f.read(8192), b""):
+                sha256.update(block)
+        return sha256.hexdigest()

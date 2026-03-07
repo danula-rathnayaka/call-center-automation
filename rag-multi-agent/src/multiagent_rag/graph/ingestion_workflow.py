@@ -10,16 +10,17 @@ from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 def pdf_extraction_node(state: IngestionState):
     file_path = state["file_path"]
     logger.info(f"Starting PDF extraction for: {file_path}")
 
     agent = PDFIngestor()
-    chunks = agent.process(file_path)
+    chunks, doc_hash = agent.process(file_path)
 
     if not chunks:
-        return {"chunks": [], "status": "failed"}
-    return {"chunks": chunks, "status": "extracted"}
+        return {"chunks": [], "document_hash": doc_hash, "status": "failed"}
+    return {"chunks": chunks, "document_hash": doc_hash, "status": "extracted"}
 
 
 def doc_extraction_node(state: IngestionState):
@@ -27,11 +28,11 @@ def doc_extraction_node(state: IngestionState):
 
     logger.info(f"Starting DOCX extraction for: {file_path}")
     agent = DocIngestor()
-    chunks = agent.process(file_path)
+    chunks, doc_hash = agent.process(file_path)
 
     if not chunks:
-        return {"chunks": [], "status": "failed"}
-    return {"chunks": chunks, "status": "extracted"}
+        return {"chunks": [], "document_hash": doc_hash, "status": "failed"}
+    return {"chunks": chunks, "document_hash": doc_hash, "status": "extracted"}
 
 
 def url_extraction_node(state: IngestionState):
@@ -39,11 +40,28 @@ def url_extraction_node(state: IngestionState):
     logger.info(f"Starting URL extraction for: {url}")
 
     agent = URLIngestor()
-    chunks = agent.process(url)
+    chunks, doc_hash = agent.process(url)
 
     if not chunks:
-        return {"chunks": [], "status": "failed"}
-    return {"chunks": chunks, "status": "extracted"}
+        return {"chunks": [], "document_hash": doc_hash, "status": "failed"}
+    return {"chunks": chunks, "document_hash": doc_hash, "status": "extracted"}
+
+
+def duplicate_checker_node(state: IngestionState):
+    doc_hash = state.get("document_hash", "")
+
+    if not doc_hash:
+        return {"status": "extracted"}
+
+    if state.get("status") != "extracted":
+        return {}
+
+    client = PineconeClient()
+    if client.check_duplicate(doc_hash):
+        logger.info(f"Duplicate document detected, skipping insertion. Hash: {doc_hash}")
+        return {"status": "duplicate"}
+
+    return {}
 
 
 def save_to_db_node(state: IngestionState):
@@ -79,11 +97,18 @@ def route_file_type(state: IngestionState):
         return "end"
 
 
+def should_save(state: IngestionState):
+    if state.get("status") == "duplicate":
+        return "end"
+    return "db_saver"
+
+
 workflow = StateGraph(IngestionState)
 
 workflow.add_node("pdf_agent", pdf_extraction_node)
 workflow.add_node("doc_agent", doc_extraction_node)
 workflow.add_node("url_agent", url_extraction_node)
+workflow.add_node("duplicate_checker", duplicate_checker_node)
 workflow.add_node("db_saver", save_to_db_node)
 
 workflow.set_conditional_entry_point(
@@ -96,9 +121,18 @@ workflow.set_conditional_entry_point(
     }
 )
 
-workflow.add_edge("pdf_agent", "db_saver")
-workflow.add_edge("doc_agent", "db_saver")
-workflow.add_edge("url_agent", "db_saver")
+workflow.add_edge("pdf_agent", "duplicate_checker")
+workflow.add_edge("doc_agent", "duplicate_checker")
+workflow.add_edge("url_agent", "duplicate_checker")
+
+workflow.add_conditional_edges(
+    "duplicate_checker",
+    should_save,
+    {
+        "db_saver": "db_saver",
+        "end": END,
+    }
+)
 
 workflow.add_edge("db_saver", END)
 

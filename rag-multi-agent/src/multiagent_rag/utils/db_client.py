@@ -109,6 +109,23 @@ class PineconeClient:
             logger.error(f"Hybrid search operation failed: {str(e)}")
             return []
 
+    def check_duplicate(self, document_hash: str) -> bool:
+        try:
+            dummy_vector = [0.0] * 384
+            results = self._index.query(
+                vector=dummy_vector,
+                top_k=1,
+                include_metadata=True,
+                filter={"document_hash": {"$eq": document_hash}}
+            )
+            if results and results.get("matches"):
+                logger.info(f"Duplicate document detected with hash: {document_hash}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Duplicate check failed: {str(e)}")
+            return False
+
     def delete_all(self):
         try:
             self._index.delete(delete_all=True)
@@ -134,7 +151,7 @@ if __name__ == '__main__':
     results = client.search(query, k=1)
 
     if results:
-        print(f"Search Successful!")
+        print("Search Successful!")
         print(f"Content: {results[0].page_content}")
     else:
         print("Search returned no results.")

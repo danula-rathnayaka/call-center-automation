@@ -1,8 +1,11 @@
+from datetime import datetime, timezone
+
 from langchain_experimental.text_splitter import SemanticChunker
 from multiagent_rag.utils.embeddings import EmbeddingManager
 from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
 
 class Chunker:
     _instance = None
@@ -30,9 +33,14 @@ class Chunker:
         docs = self._splitter.create_documents([text])
 
         clean_chunks = []
-        for doc in docs:
-            # Merging provided metadata with any extracted (though semantic chunker doesn't usually extract much)
+        total_chunks = len(docs)
+        ingested_at = datetime.now(timezone.utc).isoformat()
+
+        for i, doc in enumerate(docs):
             doc_metadata = metadata.copy()
+            doc_metadata["chunk_index"] = i
+            doc_metadata["total_chunks"] = total_chunks
+            doc_metadata["ingested_at"] = ingested_at
             clean_chunks.append({
                 "content": doc.page_content,
                 "metadata": doc_metadata

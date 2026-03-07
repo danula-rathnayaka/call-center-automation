@@ -1,4 +1,5 @@
-import os
+import hashlib
+
 import requests
 from bs4 import BeautifulSoup
 from multiagent_rag.agents.base_ingestor import BaseIngestor
@@ -7,11 +8,12 @@ from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 class URLIngestor(BaseIngestor):
     def __init__(self):
         self.chunker = Chunker()
 
-    def process(self, url: str) -> list:
+    def process(self, url: str) -> tuple:
         try:
             logger.info(f"Fetching content from URL: {url}")
             headers = {
@@ -19,9 +21,9 @@ class URLIngestor(BaseIngestor):
             }
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
-            
+
             soup = BeautifulSoup(response.text, 'html.parser')
-            
+
             for script_or_style in soup(["script", "style"]):
                 script_or_style.decompose()
 
@@ -32,15 +34,18 @@ class URLIngestor(BaseIngestor):
 
             if not clean_text.strip():
                 logger.warning(f"No textual content extracted from URL: {url}")
-                return []
+                return [], ""
+
+            doc_hash = hashlib.sha256(clean_text.encode("utf-8")).hexdigest()
 
             metadata = {
                 "source": url,
-                "type": "url"
+                "type": "url",
+                "document_hash": doc_hash,
             }
 
-            return self.chunker.split_text(clean_text, metadata)
+            return self.chunker.split_text(clean_text, metadata), doc_hash
 
         except Exception as e:
             logger.error(f"Failed to process URL {url}: {str(e)}")
-            return []
+            return [], ""
