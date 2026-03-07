@@ -1,3 +1,4 @@
+import concurrent.futures
 import os
 import sqlite3
 import time
@@ -43,38 +44,46 @@ _summarizer = ConversationSummarizer()
 _tool_agent = ToolAgent()
 
 
-def voice_processing_node(state: RAGState):
+def stt_node(state: RAGState):
     start = time.time()
     audio_path = state.get("audio_path", "")
     query = state.get("query", "")
 
     if audio_path:
-        logger.info("Processing voice input - STT + Emotion Detection")
-
+        logger.info("STT: Transcribing audio input")
         transcribed_text = _stt_engine.transcribe(audio_path)
         if not transcribed_text:
             transcribed_text = query or "Unable to transcribe audio"
-            logger.warning("STT returned empty, using fallback text")
-
-        emotion_result = _emotion_agent.detect_from_audio(audio_path)
+            logger.warning("STT returned empty result, using fallback text")
 
         elapsed = round((time.time() - start) * 1000)
         return {
             "query": transcribed_text,
-            "emotion": emotion_result.get("emotion", "neutral"),
-            "emotion_confidence": emotion_result.get("confidence", 0.0),
-            "latency_ms": {"voice_processing": elapsed},
+            "latency_ms": {"stt": elapsed},
         }
+
+    elapsed = round((time.time() - start) * 1000)
+    return {"latency_ms": {"stt": elapsed}}
+
+
+def emotion_node(state: RAGState):
+    start = time.time()
+    audio_path = state.get("audio_path", "")
+    query = state.get("query", "")
+
+    if audio_path:
+        logger.info("Emotion: Detecting emotion from audio")
+        emotion_result = _emotion_agent.detect_from_audio(audio_path)
     else:
-        logger.info("Processing text input - keyword emotion detection")
+        logger.info("Emotion: Detecting emotion from text")
         emotion_result = _emotion_agent.detect_from_text(query)
 
-        elapsed = round((time.time() - start) * 1000)
-        return {
-            "emotion": emotion_result.get("emotion", "neutral"),
-            "emotion_confidence": emotion_result.get("confidence", 0.0),
-            "latency_ms": {"voice_processing": elapsed},
-        }
+    elapsed = round((time.time() - start) * 1000)
+    return {
+        "emotion": emotion_result.get("emotion", "neutral"),
+        "emotion_confidence": emotion_result.get("confidence", 0.0),
+        "latency_ms": {"emotion_detection": elapsed},
+    }
 
 
 def history_summarizer_node(state: RAGState):
@@ -122,7 +131,7 @@ def route_after_guardrail(state: RAGState):
     elif intent == "casual":
         return "casual_responder"
     elif intent == "escalation":
-        return "escalator"
+        return "escalation_responder"
     else:
         return "contextualizer"
 
@@ -187,17 +196,25 @@ def retrieve_node(state: RAGState):
     if not sub_queries:
         sub_queries = [query]
 
-    all_docs = []
-    seen_contents = set()
-
-    for sq in sub_queries:
+    def _fetch(sq: str) -> list:
         logger.info(f"Retrieving documents for sub-query: {sq}")
-        docs = _retriever.retrieve(sq)
-        for doc in docs:
-            content_key = doc["content"][:100]
-            if content_key not in seen_contents:
-                seen_contents.add(content_key)
-                all_docs.append(doc)
+        return _retriever.retrieve(sq)
+
+    all_docs = []
+    seen_contents: set = set()
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(_fetch, sq): sq for sq in sub_queries}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                docs = future.result()
+                for doc in docs:
+                    content_key = doc["content"][:100]
+                    if content_key not in seen_contents:
+                        seen_contents.add(content_key)
+                        all_docs.append(doc)
+            except Exception as e:
+                logger.error(f"Retrieval failed for sub-query: {str(e)}")
 
     elapsed = round((time.time() - start) * 1000)
     return {
@@ -245,32 +262,29 @@ def casual_node(state: RAGState):
     start = time.time()
     query = state["query"]
     emotion = state.get("emotion", "neutral")
+    intent = state.get("intent", "casual")
 
-    emotion_hint = f"The customer's detected emotion is: {emotion}. "
-    context = emotion_hint + "User is normally chatting. Reply politely and warmly."
+    if intent == "escalation":
+        context = (
+            "The customer has requested to speak with a human agent. "
+            "Acknowledge their request warmly, let them know their concern has been noted, "
+            "and inform them that a representative will follow up. "
+            f"Customer emotion: {emotion}."
+        )
+    else:
+        emotion_hint = f"The customer's detected emotion is: {emotion}. "
+        context = emotion_hint + "User is normally chatting. Reply politely and warmly."
+
     answer = _generator.generate(query, context, state.get("chat_history", []))
 
     elapsed = round((time.time() - start) * 1000)
     return {
         "final_answer": answer,
         "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
-        "intent": "casual",
+        "intent": intent,
         "latency_ms": {"casual_responder": elapsed},
     }
 
-
-def escalation_node(state: RAGState):
-    query = state["query"]
-    answer = (
-        "I understand you'd like to speak with a representative. "
-        "I am transferring you to a human agent now. Please hold on..."
-    )
-    return {
-        "final_answer": answer,
-        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
-        "intent": "escalation",
-        "should_escalate": True,
-    }
 
 
 def tool_agent_node(state: RAGState):
@@ -339,7 +353,8 @@ def interaction_logger_node(state: RAGState):
 
 workflow = StateGraph(RAGState)
 
-workflow.add_node("voice_processor", voice_processing_node)
+workflow.add_node("stt_processor", stt_node)
+workflow.add_node("emotion_detector", emotion_node)
 workflow.add_node("history_summarizer", history_summarizer_node)
 workflow.add_node("guardrail", guardrail_node)
 workflow.add_node("blocked_response", blocked_response_node)
@@ -351,13 +366,14 @@ workflow.add_node("generator", generate_node)
 workflow.add_node("tool_agent", tool_agent_node)
 workflow.add_node("tools", ToolNode(crm_tools, messages_key="chat_history"))
 workflow.add_node("casual_responder", casual_node)
-workflow.add_node("escalator", escalation_node)
 workflow.add_node("confidence_evaluator", confidence_evaluator_node)
 workflow.add_node("interaction_logger", interaction_logger_node)
 
-workflow.set_entry_point("voice_processor")
+workflow.set_entry_point("stt_processor")
 
-workflow.add_edge("voice_processor", "history_summarizer")
+workflow.add_edge("stt_processor", "emotion_detector")
+workflow.add_edge("stt_processor", "history_summarizer")
+workflow.add_edge("emotion_detector", "guardrail")
 workflow.add_edge("history_summarizer", "guardrail")
 
 workflow.add_conditional_edges(
@@ -367,7 +383,7 @@ workflow.add_conditional_edges(
         "contextualizer": "contextualizer",
         "tool_agent": "tool_agent",
         "casual_responder": "casual_responder",
-        "escalator": "escalator",
+        "escalation_responder": "casual_responder",
         "blocked_response": "blocked_response",
     }
 )
@@ -389,8 +405,8 @@ workflow.add_conditional_edges(
 workflow.add_edge("tools", "tool_agent")
 
 workflow.add_edge("casual_responder", "confidence_evaluator")
-workflow.add_edge("escalator", "confidence_evaluator")
-workflow.add_edge("blocked_response", "confidence_evaluator")
+
+workflow.add_edge("blocked_response", "interaction_logger")
 
 workflow.add_edge("confidence_evaluator", "interaction_logger")
 workflow.add_edge("interaction_logger", END)

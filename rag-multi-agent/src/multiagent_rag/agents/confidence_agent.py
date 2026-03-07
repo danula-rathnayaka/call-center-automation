@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import sys
 
@@ -11,9 +12,9 @@ class ConfidenceAgent:
     ESCALATION_THRESHOLD = 0.4
 
     def __init__(self):
-        self._pipeline_available = self._check_pipeline()
+        self._model = self._load_model()
 
-    def _check_pipeline(self) -> bool:
+    def _load_model(self):
         try:
             project_root = os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -23,24 +24,26 @@ class ConfidenceAgent:
             if confidence_model_dir not in sys.path:
                 sys.path.insert(0, confidence_model_dir)
 
-            from inference import predict as confidence_predict
-            self._predict_fn = confidence_predict
-            logger.info("Confidence model inference pipeline loaded successfully")
-            return True
-        except (ImportError, ModuleNotFoundError):
-            logger.warning(
-                "Confidence model inference pipeline not available. Using fallback. "
-                "To enable: create confidence-model/inference.py with "
-                "predict(query, response, retrieved_chunks, emotion) -> dict"
+            spec = importlib.util.spec_from_file_location(
+                "confidence_model_main",
+                os.path.join(confidence_model_dir, "main.py")
             )
-            return False
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            model = module.ConfidentModel()
+            logger.info("ConfidentModel loaded from confidence-model/main.py")
+            return model
+        except (ImportError, ModuleNotFoundError, Exception) as e:
+            logger.warning(
+                f"ConfidentModel could not be loaded ({str(e)}). Using heuristic fallback."
+            )
+            return None
 
     def evaluate(self, query: str, response: str, retrieved_chunks: list, emotion: str) -> dict:
         try:
-            if self._pipeline_available:
-                return self._call_inference_pipeline(query, response, retrieved_chunks, emotion)
-            else:
-                return self._fallback_evaluate(query, response, retrieved_chunks, emotion)
+            if self._model is not None:
+                return self._call_model(response)
+            return self._fallback_evaluate(query, response, retrieved_chunks, emotion)
         except Exception as e:
             logger.error(f"Confidence evaluation failed: {str(e)}")
             return {
@@ -49,24 +52,22 @@ class ConfidenceAgent:
                 "reason": "Evaluation error - defaulting to moderate confidence"
             }
 
-    def _call_inference_pipeline(self, query, response, retrieved_chunks, emotion) -> dict:
+    def _call_model(self, response: str) -> dict:
         try:
-            result = self._predict_fn(query, response, retrieved_chunks, emotion)
-            if isinstance(result, dict):
-                score = float(result.get("confidence_score", 0.5))
-            else:
-                score = float(result)
+            result = self._model.predict_confident_level(response)
+            score = float(result.get("confidence_score", 0.5))
+            label = result.get("confidence_label", "low")
 
             return {
                 "confidence_score": score,
                 "should_escalate": score < self.ESCALATION_THRESHOLD,
-                "reason": result.get("reason", "") if isinstance(result, dict) else ""
+                "reason": f"Model prediction: {label} confidence (score={score:.3f})",
             }
         except Exception as e:
-            logger.error(f"Confidence inference pipeline error: {str(e)}")
-            return self._fallback_evaluate(query, response, retrieved_chunks, emotion)
+            logger.error(f"ConfidentModel.predict_confident_level() failed: {str(e)}")
+            raise
 
-    def _fallback_evaluate(self, query, response, retrieved_chunks, emotion) -> dict:
+    def _fallback_evaluate(self, query: str, response: str, retrieved_chunks: list, emotion: str) -> dict:
         score = 0.5
 
         if len(response) < 20:
@@ -89,7 +90,7 @@ class ConfidenceAgent:
                 score -= 0.3
                 break
 
-        if not retrieved_chunks or len(retrieved_chunks) == 0:
+        if not retrieved_chunks:
             score -= 0.2
         else:
             total_content = sum(len(c.get("content", "")) for c in retrieved_chunks)
@@ -108,12 +109,8 @@ class ConfidenceAgent:
         score = max(0.0, min(1.0, score))
         should_escalate = score < self.ESCALATION_THRESHOLD
 
-        reason = "Heuristic evaluation"
-        if should_escalate:
-            reason = "Low confidence - consider human agent handoff"
-
         return {
             "confidence_score": round(score, 3),
             "should_escalate": should_escalate,
-            "reason": reason
+            "reason": "Low confidence - consider human agent handoff" if should_escalate else "Heuristic evaluation"
         }

@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import sys
 
@@ -9,9 +10,9 @@ logger = get_logger(__name__)
 class EmotionAgent:
 
     def __init__(self):
-        self._pipeline_available = self._check_pipeline()
+        self._model = self._load_model()
 
-    def _check_pipeline(self) -> bool:
+    def _load_model(self):
         try:
             project_root = os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -21,48 +22,46 @@ class EmotionAgent:
             if emotion_model_dir not in sys.path:
                 sys.path.insert(0, emotion_model_dir)
 
-            from inference import predict as emotion_predict
-            self._predict_fn = emotion_predict
-            logger.info("Emotion model inference pipeline loaded successfully")
-            return True
-        except (ImportError, ModuleNotFoundError):
-            logger.warning(
-                "Emotion model inference pipeline not available. Using text fallback. "
-                "To enable: create emotion-model/inference.py with predict(audio_path) -> dict"
+            spec = importlib.util.spec_from_file_location(
+                "emotion_model_main",
+                os.path.join(emotion_model_dir, "main.py")
             )
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            self._detect_fn = module.detect_emotion
+            logger.info("Emotion model loaded from emotion-model/main.py")
+            return True
+        except (ImportError, ModuleNotFoundError, Exception) as e:
+            logger.warning(
+                f"Emotion model not available ({str(e)}). Using keyword fallback until implemented."
+            )
+            self._detect_fn = None
             return False
 
     def detect_from_audio(self, audio_path: str) -> dict:
         try:
-            if self._pipeline_available:
-                return self._call_inference_pipeline(audio_path)
-            else:
-                logger.info("Emotion model not available - returning neutral for audio")
-                return {"emotion": "neutral", "confidence": 0.0}
+            if self._model and self._detect_fn is not None:
+                result = self._detect_fn()
+                if result is not None:
+                    return self._normalize_result(result)
+
+            logger.info("Emotion model not yet implemented - returning neutral for audio")
+            return {"emotion": "neutral", "confidence": 0.0}
         except Exception as e:
             logger.error(f"Emotion detection from audio failed: {str(e)}")
             return {"emotion": "neutral", "confidence": 0.0}
 
     def detect_from_text(self, text: str) -> dict:
         try:
-            if self._pipeline_available:
-                try:
-                    result = self._predict_fn(text)
+            if self._model and self._detect_fn is not None:
+                result = self._detect_fn()
+                if result is not None:
                     return self._normalize_result(result)
-                except Exception:
-                    pass
+
             return self._keyword_fallback(text)
         except Exception as e:
             logger.error(f"Emotion detection from text failed: {str(e)}")
-            return {"emotion": "neutral", "confidence": 0.0}
-
-    def _call_inference_pipeline(self, audio_path: str) -> dict:
-        try:
-            result = self._predict_fn(audio_path)
-            return self._normalize_result(result)
-        except Exception as e:
-            logger.error(f"Emotion inference pipeline error: {str(e)}")
-            return {"emotion": "neutral", "confidence": 0.0}
+            return self._keyword_fallback(text)
 
     def _normalize_result(self, result) -> dict:
         if isinstance(result, dict):
@@ -70,22 +69,21 @@ class EmotionAgent:
                 "emotion": result.get("emotion", "neutral"),
                 "confidence": float(result.get("confidence", 0.0))
             }
-        else:
-            return {"emotion": str(result), "confidence": 1.0}
+        return {"emotion": str(result), "confidence": 1.0}
 
     def _keyword_fallback(self, text: str) -> dict:
         text_lower = text.lower()
 
         emotion_keywords = {
             "angry": ["angry", "furious", "outraged", "terrible", "worst", "hate",
-                       "ridiculous", "unacceptable", "disgusting", "awful"],
+                      "ridiculous", "unacceptable", "disgusting", "awful"],
             "frustrated": ["frustrated", "annoying", "irritating", "stuck", "can't",
                            "won't work", "not working", "broken", "useless", "waste",
                            "still", "again", "keep"],
             "happy": ["thank", "thanks", "great", "awesome", "excellent", "perfect",
-                       "amazing", "love", "wonderful", "appreciate", "helpful", "solved"],
+                      "amazing", "love", "wonderful", "appreciate", "helpful", "solved"],
             "sad": ["sad", "disappointed", "unfortunately", "sorry", "lost", "miss",
-                     "upset", "unhappy", "regret"],
+                    "upset", "unhappy", "regret"],
             "worried": ["worried", "concerned", "afraid", "scared", "anxious", "urgent",
                         "emergency", "help", "please"],
         }

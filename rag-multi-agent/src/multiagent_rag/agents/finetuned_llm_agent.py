@@ -9,10 +9,10 @@ logger = get_logger(__name__)
 class FinetunedLLMAgent:
 
     def __init__(self):
-        self._pipeline_available = self._check_pipeline()
+        self._pipeline_ready = self._load_pipeline()
         self._fallback_generator = None
 
-    def _check_pipeline(self) -> bool:
+    def _load_pipeline(self) -> bool:
         try:
             project_root = os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -22,15 +22,24 @@ class FinetunedLLMAgent:
             if finetuned_llm_dir not in sys.path:
                 sys.path.insert(0, finetuned_llm_dir)
 
-            from inference import generate as finetuned_generate
-            self._generate_fn = finetuned_generate
-            logger.info("Fine-tuned LLM inference pipeline loaded successfully")
+            import inference_pipeline as _pipeline
+            _pipeline.initialize()
+
+            self._generate_fn = _pipeline.generate_response
+            self._format_fn = _pipeline.format_prompt
+            logger.info("Fine-tuned LLM (finetuned-LLM/inference_pipeline.py) loaded and initialized")
             return True
-        except (ImportError, ModuleNotFoundError):
+
+        except (ImportError, ModuleNotFoundError) as e:
             logger.warning(
-                "Fine-tuned LLM inference pipeline not available. Using Groq fallback. "
-                "To enable: create finetuned-LLM/inference.py with "
-                "generate(query, context, emotion, history) -> str"
+                f"Fine-tuned LLM inference_pipeline.py not importable ({str(e)}). "
+                "Using Groq as primary generator."
+            )
+            return False
+        except Exception as e:
+            logger.error(
+                f"Fine-tuned LLM initialization failed: {str(e)}. "
+                "Using Groq as primary generator."
             )
             return False
 
@@ -41,39 +50,39 @@ class FinetunedLLMAgent:
         return self._fallback_generator
 
     def generate(self, query: str, context: str, emotion: str, history: list) -> str:
-        try:
-            if self._pipeline_available:
-                return self._call_inference_pipeline(query, context, emotion, history)
-            else:
-                return self._fallback_generate(query, context, emotion, history)
-        except Exception as e:
-            logger.error(f"Fine-tuned LLM generation failed: {str(e)}")
-            return self._fallback_generate(query, context, emotion, history)
+        if self._pipeline_ready:
+            try:
+                return self._call_finetuned_llm(query, context, emotion, history)
+            except Exception as e:
+                logger.error(f"Fine-tuned LLM generation failed, falling back to Groq: {str(e)}")
 
-    def _call_inference_pipeline(self, query: str, context: str, emotion: str, history: list) -> str:
-        try:
-            simple_history = []
-            for msg in history:
-                role = "user" if msg.type == "human" else "assistant"
-                simple_history.append({"role": role, "content": msg.content})
+        return self._groq_fallback(query, context, emotion, history)
 
-            result = self._generate_fn(query, context, emotion, simple_history)
-            return str(result)
-        except Exception as e:
-            logger.error(f"Fine-tuned LLM inference pipeline error: {str(e)}")
-            return self._fallback_generate(query, context, emotion, history)
+    def _call_finetuned_llm(self, query: str, context: str, emotion: str, history: list) -> str:
+        history_lines = []
+        for msg in history:
+            role = "User" if msg.type == "human" else "Assistant"
+            history_lines.append(f"{role}: {msg.content}")
 
-    def _fallback_generate(self, query: str, context: str, emotion: str, history: list) -> str:
+        response = self._generate_fn(
+            customer_query=query,
+            facts=context,
+            emotion=emotion,
+            max_new_tokens=300,
+        )
+        return str(response).strip()
+
+    def _groq_fallback(self, query: str, context: str, emotion: str, history: list) -> str:
         logger.info(f"Using Groq Generator as fallback (emotion: {emotion})")
         generator = self._get_fallback_generator()
 
-        emotion_context = self._build_emotion_context(emotion)
-        enriched_context = f"{emotion_context}\n\n{context}"
+        emotion_prefix = self._emotion_instruction(emotion)
+        enriched_context = f"{emotion_prefix}\n\n{context}"
 
         return generator.generate(query, enriched_context, history)
 
-    def _build_emotion_context(self, emotion: str) -> str:
-        emotion_instructions = {
+    def _emotion_instruction(self, emotion: str) -> str:
+        instructions = {
             "angry": (
                 "[CUSTOMER EMOTION: Angry] "
                 "The customer is upset. Respond with extra empathy, acknowledge their frustration, "
@@ -104,4 +113,4 @@ class FinetunedLLMAgent:
                 "The customer's tone is neutral. Respond professionally and helpfully."
             ),
         }
-        return emotion_instructions.get(emotion, emotion_instructions["neutral"])
+        return instructions.get(emotion, instructions["neutral"])
