@@ -12,6 +12,7 @@ load_dotenv()
 
 logger = get_logger(__name__)
 
+
 class IntentRouter:
     def __init__(self):
         self.llm = ChatGroq(
@@ -30,14 +31,23 @@ class IntentRouter:
             template_text = f.read()
 
         self.prompt = ChatPromptTemplate.from_template(template_text)
-
         self.chain = self.prompt | self.llm | self.parser
 
-    def route(self, query: str) -> str:
+    def route(self, query: str, history: list = None) -> str:
         try:
+            history_context = ""
+            if history:
+                recent = history[-4:]
+                history_lines = []
+                for msg in recent:
+                    role = "Customer" if msg.type == "human" else "Agent"
+                    history_lines.append(f"{role}: {msg.content}")
+                history_context = "\n".join(history_lines)
+
             response: RouteResponse = self.chain.invoke({
                 "query": query,
-                "format_instructions": self.parser.get_format_instructions()
+                "format_instructions": self.parser.get_format_instructions(),
+                "history_context": history_context,
             })
 
             return response.intent
@@ -45,18 +55,3 @@ class IntentRouter:
         except Exception as e:
             logger.error(f"Routing failed for query: {query}. Error: {str(e)}")
             return "technical"
-
-
-if __name__ == "__main__":
-    router = IntentRouter()
-
-    test_queries = [
-        "My internet is very slow",
-        "Good morning",
-        "I want to speak to a manager!",
-        "Huawei B310 red light"
-    ]
-
-    print("\n--- ROUTER TEST ---")
-    for q in test_queries:
-        router.route(q)
