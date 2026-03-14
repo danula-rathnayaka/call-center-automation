@@ -1,12 +1,15 @@
-import os
+from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
-from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
 
 from multiagent_rag.tools.crm_tools import crm_tools
 from multiagent_rag.utils.logger import get_logger
 
+load_dotenv()
+
 logger = get_logger(__name__)
+
 
 class ToolAgent:
     def __init__(self):
