@@ -1,4 +1,5 @@
 import csv
+import time
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -18,6 +19,8 @@ def router():
 
 @pytest.mark.parametrize("row", load_data())
 def test_intent_router(router, row):
+    time.sleep(1)
+
     query = row["query"]
     history_str = row["history_context"]
     expected = row["expected_intent"]

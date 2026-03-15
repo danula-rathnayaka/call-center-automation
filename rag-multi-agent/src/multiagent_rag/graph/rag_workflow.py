@@ -4,12 +4,12 @@ import sqlite3
 import time
 
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import ToolMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
 
-from multiagent_rag.agents.contextualizer import Contextualizer
 from multiagent_rag.agents.confidence_agent import ConfidenceAgent
+from multiagent_rag.agents.contextualizer import Contextualizer
 from multiagent_rag.agents.emotion_agent import EmotionAgent
 from multiagent_rag.agents.finetuned_llm_agent import FinetunedLLMAgent
 from multiagent_rag.agents.generator import Generator
@@ -21,7 +21,7 @@ from multiagent_rag.agents.summarizer import ConversationSummarizer
 from multiagent_rag.agents.tool_agent import ToolAgent
 from multiagent_rag.graph.rag_router import IntentRouter
 from multiagent_rag.state.rag_state import RAGState
-from multiagent_rag.tools.crm_tools import crm_tools
+from multiagent_rag.tools.crm_tools import get_dynamic_tools
 from multiagent_rag.utils.interaction_logger import InteractionLogger
 from multiagent_rag.utils.logger import get_logger
 from multiagent_rag.utils.stt import STTEngine
@@ -148,9 +148,6 @@ def blocked_response_node(state: RAGState):
         "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
         "intent": "blocked",
     }
-
-
-
 
 
 def contextualize_node(state: RAGState):
@@ -286,18 +283,28 @@ def casual_node(state: RAGState):
     }
 
 
-
 def tool_agent_node(state: RAGState):
     start = time.time()
     query = state["query"]
     history = state.get("chat_history", [])
 
+    is_looping_from_tool = len(history) > 0 and history[-1].type == "tool"
+
+    if not is_looping_from_tool:
+        messages_to_pass = history + [HumanMessage(content=query)]
+        history_to_return = [HumanMessage(content=query)]
+    else:
+        messages_to_pass = history
+        history_to_return = []
+
     logger.info("Invoking tool agent")
-    response = _tool_agent.invoke(query, history)
+    response = _tool_agent.invoke(query, messages_to_pass)
+
+    history_to_return.append(response)
 
     elapsed = round((time.time() - start) * 1000)
     return {
-        "chat_history": [HumanMessage(content=query), response],
+        "chat_history": history_to_return,
         "final_answer": response.content,
         "intent": "customer_service",
         "latency_ms": {"tool_agent": elapsed},
@@ -351,6 +358,62 @@ def interaction_logger_node(state: RAGState):
     return {"status": "completed"}
 
 
+def dynamic_tools_node(state: RAGState):
+    start = time.time()
+    history = state.get("chat_history", [])
+
+    last_message = history[-1]
+
+    if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
+        elapsed = round((time.time() - start) * 1000)
+        return {"latency_ms": {"tools": elapsed}}
+
+    logger.info(f"Executing dynamic tools: {[t['name'] for t in last_message.tool_calls]}")
+
+    current_tools_list = get_dynamic_tools()
+    tools_map = {tool.name: tool for tool in current_tools_list}
+
+    new_messages = []
+
+    for tool_call in last_message.tool_calls:
+        tool_name = tool_call["name"]
+        tool_args = tool_call["args"]
+        tool_call_id = tool_call["id"]
+
+        if tool_name in tools_map:
+            try:
+                # Invoke the dynamic tool
+                result = tools_map[tool_name].invoke(tool_args)
+                tool_msg = ToolMessage(
+                    content=str(result),
+                    name=tool_name,
+                    tool_call_id=tool_call_id
+                )
+            except Exception as e:
+                logger.error(f"Error executing tool {tool_name}: {e}")
+                tool_msg = ToolMessage(
+                    content=f"Error executing tool: {str(e)}",
+                    name=tool_name,
+                    tool_call_id=tool_call_id
+                )
+        else:
+            logger.warning(f"Tool {tool_name} was called but is not registered.")
+            tool_msg = ToolMessage(
+                content=f"Error: Tool {tool_name} not found or no longer available.",
+                name=tool_name,
+                tool_call_id=tool_call_id
+            )
+
+        new_messages.append(tool_msg)
+
+    elapsed = round((time.time() - start) * 1000)
+
+    return {
+        "chat_history": new_messages,
+        "latency_ms": {"tools": elapsed}
+    }
+
+
 workflow = StateGraph(RAGState)
 
 workflow.add_node("stt_processor", stt_node)
@@ -364,7 +427,7 @@ workflow.add_node("retriever", retrieve_node)
 workflow.add_node("reranker", reranker_node)
 workflow.add_node("generator", generate_node)
 workflow.add_node("tool_agent", tool_agent_node)
-workflow.add_node("tools", ToolNode(crm_tools, messages_key="chat_history"))
+workflow.add_node("tools", dynamic_tools_node)
 workflow.add_node("casual_responder", casual_node)
 workflow.add_node("confidence_evaluator", confidence_evaluator_node)
 workflow.add_node("interaction_logger", interaction_logger_node)

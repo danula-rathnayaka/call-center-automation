@@ -17,13 +17,23 @@ INJECTION_PATTERNS = [
     r"repeat\s+(your\s+)?(system\s+)?(prompt|instructions)",
     r"reveal\s+(your\s+)?(system\s+)?(prompt|instructions)",
     r"what\s+(is|are)\s+your\s+(system\s+)?(prompt|instructions|rules)",
+    r"bypassing",
+    r"developer\s+mode",
+    r"dan\s+",
+    r"give\s+me\s+all\s+(the\s+)?data",
+    r"delete\s+(the\s+)?database",
+    r"list\s+all\s+users"
 ]
 
 PII_PATTERNS = [
     r"\b\d{9}[VvXx]\b",
     r"\b\d{12}\b",
+    r"\b0\d{9}\b",
+    r"\b\d{10}\b",
     r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
     r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",
+    r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",
+    r"\b\d{4}[\s-]?\d{6}[\s-]?\d{5}\b",
 ]
 
 

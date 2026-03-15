@@ -81,12 +81,14 @@ from api.routes.ingestion import router as ingestion_router
 from api.routes.knowledge import router as knowledge_router
 from api.routes.health import router as health_router
 from api.routes.feedback import router as feedback_router
+from api.routes.tools_router import router as tools_router
 
 app.include_router(chat_router)
 app.include_router(ingestion_router)
 app.include_router(knowledge_router)
 app.include_router(health_router)
 app.include_router(feedback_router)
+app.include_router(tools_router)
 
 
 @app.get("/")

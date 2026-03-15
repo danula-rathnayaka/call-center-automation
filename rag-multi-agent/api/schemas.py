@@ -1,4 +1,5 @@
 from typing import Optional, List
+
 from pydantic import BaseModel, Field
 
 
@@ -101,3 +102,17 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     status: str
     message: str
+
+
+class ToolParameter(BaseModel):
+    name: str = Field(...)
+    type: str = Field(...)
+    description: str = Field(...)
+
+
+class ToolRegistrationRequest(BaseModel):
+    tool_name: str = Field(...)
+    description: str = Field(...)
+    api_url: str = Field(...)
+    http_method: str = Field(default="POST")
+    parameters: List[ToolParameter] = Field(default_factory=list)

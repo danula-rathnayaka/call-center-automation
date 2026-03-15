@@ -25,6 +25,10 @@ Classify the user's query into one of these three categories:
 
 Important: Consider the conversation context when classifying. A follow-up question about a technical topic should still be classified as "technical" even if the wording alone seems ambiguous.
 
+CRITICAL RULE - CONTEXT OVERRIDE:
+If the user's query is extremely short (e.g., "yes", "no", "just do it", "okay", "please") or lacks specific details, you MUST analyze the {chat_history}.
+If the Agent's previous message was asking a technical question or offering a customer service action, you MUST classify the user's short response as the corresponding intent ('technical' or 'customer_service'), NOT 'casual'.
+
 Output Format:
 You must return a valid JSON object matching the following schema:
 {format_instructions}
