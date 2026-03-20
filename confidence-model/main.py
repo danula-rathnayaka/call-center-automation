@@ -1,6 +1,5 @@
 from features.confidence_feature_extractor import ConfidenceFeatureExtractor
 from sentence_transformers import SentenceTransformer
-from sklearn.preprocessing import StandardScaler
 
 import numpy as np
 from xgboost import XGBClassifier
@@ -13,7 +12,7 @@ class ConfidentModel:
         self.embedder = SentenceTransformer("all-MiniLM-L6-v2")
         self.model = XGBClassifier()
         self.model.load_model('model/best_xgb.json')
-        self.threshold = 0.5
+        self.threshold = 0.7
 
         with open("model/scaler.pkl", "rb") as f:
             self.scaler = pickle.load(f)
@@ -49,8 +48,8 @@ class ConfidentModel:
             "confidence_score": float(prob),
             "linguistic_features": ling
         }
-        
+ 
 
 
 cm = ConfidentModel()
-print(cm.predict_confident_level("I don't know, perhaps it might work"))
+print(cm.predict_confident_level("Um, maybe we could try that, I guess?"))

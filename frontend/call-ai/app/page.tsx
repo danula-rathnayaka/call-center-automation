@@ -20,6 +20,7 @@ export default function Home() {
   const [transcript, setTranscript] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
   const [isNumberDialogOpen, setNumberDialogOpen] = useState(false);
+  const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
 
   const recognitionRef = useRef<any>(null);
 
@@ -30,6 +31,39 @@ export default function Home() {
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const speak = (text: string) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    utterance.lang = "en-US";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onstart = () => {
+      setIsAgentSpeaking(true);
+    };
+
+    utterance.onend = () => {
+      setIsAgentSpeaking(false);
+    };
+
+    speechSynthesis.speak(utterance);
+  };
+
+  const sendToBackend = async (text: string) => {
+    const res = await fetch("http://127.0.0.1:8000/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: text, session_id: "123123" }),
+    });
+
+    const data = await res.json();
+
+    console.log(data);
+    speak(data.response);
+  };
 
   const stopAudioAnalysis = () => {
     if (animationFrameRef.current)
@@ -108,15 +142,21 @@ export default function Home() {
     recognition.lang = "en-US";
 
     recognition.onresult = (event: any) => {
-      let currentTranscript = "";
+      let finalTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        currentTranscript += event.results[i][0].transcript;
+        const transcript = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        }
       }
 
-      setTranscript(currentTranscript);
+      if (finalTranscript) {
+        setTranscript(finalTranscript);
+        sendToBackend(finalTranscript); // send to backend
+      }
     };
-
     recognition.onend = () => {
       setIsListening(false);
       stopAudioAnalysis();
@@ -226,6 +266,7 @@ export default function Home() {
             <div className="flex flex-col gap-8 items-center">
               <CallControls
                 isListening={isListening}
+                isAgentSpeaking={isAgentSpeaking}
                 audioLevel={audioLevel}
                 onMicClick={handleMicClick}
               />
@@ -246,7 +287,7 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="pb-6 text-sm text-gray-700">
-          Powered by Call Center Automation Solution by Group 12
+          Powered by Call Center Automation Solution by Group 11
         </footer>
       </main>
 
