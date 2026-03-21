@@ -1,6 +1,6 @@
+from api.schemas import HealthResponse, ComponentStatus
 from fastapi import APIRouter
 
-from api.schemas import HealthResponse, ComponentStatus
 from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,11 +16,8 @@ async def health_check():
         from multiagent_rag.utils.db_client import PineconeClient
         client = PineconeClient()
         stats = client._index.describe_index_stats()
-        components.append(ComponentStatus(
-            name="Pinecone Vector DB",
-            status="healthy",
-            details=f"Connected. Vectors: {stats.get('total_vector_count', 0)}"
-        ))
+        components.append(ComponentStatus(name="Pinecone Vector DB", status="healthy",
+            details=f"Connected. Vectors: {stats.get('total_vector_count', 0)}"))
     except Exception as e:
         components.append(ComponentStatus(name="Pinecone Vector DB", status="unhealthy", details=str(e)))
         overall_healthy = False
@@ -29,11 +26,8 @@ async def health_check():
         from multiagent_rag.utils.embeddings import EmbeddingManager
         em = EmbeddingManager()
         test_emb = em.get_embedding("test")
-        components.append(ComponentStatus(
-            name="Embedding Model",
-            status="healthy",
-            details=f"all-MiniLM-L6-v2 loaded. Dim: {len(test_emb)}"
-        ))
+        components.append(ComponentStatus(name="Embedding Model", status="healthy",
+            details=f"all-MiniLM-L6-v2 loaded. Dim: {len(test_emb)}"))
     except Exception as e:
         components.append(ComponentStatus(name="Embedding Model", status="unhealthy", details=str(e)))
         overall_healthy = False
@@ -50,27 +44,25 @@ async def health_check():
         from multiagent_rag.agents.emotion_agent import EmotionAgent
         agent = EmotionAgent()
         result = agent.detect_from_text("test")
-        pipeline_status = "real model" if agent._pipeline_available else "fallback"
-        components.append(ComponentStatus(
-            name="Emotion Model",
-            status="healthy",
-            details=f"Using {pipeline_status}. Test emotion: {result['emotion']}"
-        ))
+        pipeline_status = "real model" if agent._model else "keyword fallback"
+        components.append(ComponentStatus(name="Emotion Model", status="healthy",
+            details=f"Using {pipeline_status}. Test emotion: {result['emotion']}"))
     except Exception as e:
         components.append(ComponentStatus(name="Emotion Model", status="unhealthy", details=str(e)))
 
     try:
         from multiagent_rag.agents.confidence_agent import ConfidenceAgent
         agent = ConfidenceAgent()
-        pipeline_status = "real model" if agent._pipeline_available else "fallback"
-        components.append(ComponentStatus(name="Confidence Model", status="healthy", details=f"Using {pipeline_status}"))
+        pipeline_status = "real model" if agent._model else "heuristic fallback"
+        components.append(
+            ComponentStatus(name="Confidence Model", status="healthy", details=f"Using {pipeline_status}"))
     except Exception as e:
         components.append(ComponentStatus(name="Confidence Model", status="unhealthy", details=str(e)))
 
     try:
         from multiagent_rag.agents.finetuned_llm_agent import FinetunedLLMAgent
         agent = FinetunedLLMAgent()
-        pipeline_status = "real model" if agent._pipeline_available else "Groq fallback"
+        pipeline_status = "real model" if agent._pipeline_ready else "Groq fallback"
         components.append(ComponentStatus(name="Fine-tuned LLM", status="healthy", details=f"Using {pipeline_status}"))
     except Exception as e:
         components.append(ComponentStatus(name="Fine-tuned LLM", status="unhealthy", details=str(e)))
@@ -82,7 +74,4 @@ async def health_check():
         components.append(ComponentStatus(name="RAG Workflow", status="unhealthy", details=str(e)))
         overall_healthy = False
 
-    return HealthResponse(
-        status="healthy" if overall_healthy else "degraded",
-        components=components,
-    )
+    return HealthResponse(status="healthy" if overall_healthy else "degraded", components=components, )

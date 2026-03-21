@@ -11,18 +11,12 @@ from multiagent_rag.utils.logger import get_logger
 from multiagent_rag.utils.sparse import SparseEmbeddingManager
 
 load_dotenv()
-
 logger = get_logger(__name__)
 
-_ALPHA_BY_INTENT = {
-    "technical": 0.3,
-    "customer_service": 0.4,
-    "casual": 0.8,
-    "escalation": 0.7,
-    "blocked": 0.5,
-    "unknown": 0.5,
-}
+_ALPHA_BY_INTENT = {"technical": 0.3, "customer_service": 0.4, "casual": 0.8, "escalation": 0.7, "blocked": 0.5,
+    "unknown": 0.5, }
 _DEFAULT_ALPHA = 0.5
+_MIN_RELEVANCE_SCORE = 0.3
 
 
 class PineconeClient:
@@ -47,12 +41,8 @@ class PineconeClient:
 
         if self._index_name not in existing_indexes:
             logger.info(f"Creating hybrid index '{self._index_name}'...")
-            self._pc_client.create_index(
-                name=self._index_name,
-                dimension=384,
-                metric="dotproduct",
-                spec=ServerlessSpec(cloud="aws", region="us-east-1")
-            )
+            self._pc_client.create_index(name=self._index_name, dimension=384, metric="dotproduct",
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"))
             while not self._pc_client.describe_index(self._index_name).status["ready"]:
                 time.sleep(1)
 
@@ -64,26 +54,18 @@ class PineconeClient:
     def insert_documents(self, documents: list) -> bool:
         if not documents:
             return False
-
         try:
             texts = [doc.page_content for doc in documents]
             dense_vectors = self._dense_manager.get_embeddings(texts)
             vectors_to_upsert = []
-
             for i, doc in enumerate(documents):
                 sparse_vector = self._sparse_manager.get_sparse_vector(doc.page_content)
                 unique_id = f"doc_{uuid.uuid4()}"
-                vectors_to_upsert.append({
-                    "id": unique_id,
-                    "values": dense_vectors[i],
-                    "sparse_values": sparse_vector,
-                    "metadata": doc.metadata | {"text": doc.page_content},
-                })
-
+                vectors_to_upsert.append({"id": unique_id, "values": dense_vectors[i], "sparse_values": sparse_vector,
+                    "metadata": doc.metadata | {"text": doc.page_content}, })
             self._index.upsert(vectors=vectors_to_upsert)
             logger.info(f"Upserted {len(vectors_to_upsert)} hybrid vectors to Pinecone")
             return True
-
         except Exception as e:
             logger.error(f"Failed to insert documents: {e}")
             return False
@@ -95,25 +77,26 @@ class PineconeClient:
             sparse_query = self._sparse_manager.get_sparse_query(query)
 
             scaled_dense = [v * alpha for v in dense_query]
-            scaled_sparse = {
-                "indices": sparse_query["indices"],
-                "values": [v * (1 - alpha) for v in sparse_query["values"]],
-            }
+            scaled_sparse = {"indices": sparse_query["indices"],
+                "values": [v * (1 - alpha) for v in sparse_query["values"]], }
 
             logger.info(f"Hybrid search | intent={intent} alpha={alpha} | query: {query[:60]}")
 
-            results = self._index.query(
-                vector=scaled_dense,
-                sparse_vector=scaled_sparse,
-                top_k=k,
-                include_metadata=True,
-            )
+            results = self._index.query(vector=scaled_dense, sparse_vector=scaled_sparse, top_k=k,
+                include_metadata=True, )
 
             docs = []
             for match in results["matches"]:
+                score = match.get("score", 0.0)
+                if score < _MIN_RELEVANCE_SCORE:
+                    logger.info(f"Filtered low-relevance chunk (score={score:.3f}): {match.get('id', '')}")
+                    continue
                 text_content = match["metadata"].pop("text", "")
-                docs.append(Document(page_content=text_content, metadata=match["metadata"]))
+                doc = Document(page_content=text_content, metadata=match["metadata"])
+                doc.metadata["_score"] = round(score, 4)
+                docs.append(doc)
 
+            logger.info(f"Returned {len(docs)} chunks above score threshold {_MIN_RELEVANCE_SCORE}")
             return docs
 
         except Exception as e:
@@ -131,11 +114,7 @@ class PineconeClient:
                 logger.warning("Index is empty — no texts to fetch for BM25 fitting")
                 return []
 
-            results = self._index.query(
-                vector=dummy_vec,
-                top_k=min(total, 10000),
-                include_metadata=True,
-            )
+            results = self._index.query(vector=dummy_vec, top_k=min(total, 10000), include_metadata=True, )
 
             for match in results.get("matches", []):
                 text = match.get("metadata", {}).get("text", "")
@@ -144,7 +123,6 @@ class PineconeClient:
 
             logger.info(f"Fetched {len(texts)} texts from Pinecone for BM25 fitting")
             return texts
-
         except Exception as e:
             logger.error(f"Failed to fetch texts from Pinecone: {e}")
             return []
@@ -152,15 +130,9 @@ class PineconeClient:
     def check_duplicate(self, document_hash: str) -> bool:
         try:
             dummy_vector = [0.0] * 384
-            results = self._index.query(
-                vector=dummy_vector,
-                top_k=1,
-                include_metadata=True,
-                filter={"document_hash": {"$eq": document_hash}},
-            )
-            if results and results.get("matches"):
-                return True
-            return False
+            results = self._index.query(vector=dummy_vector, top_k=1, include_metadata=True,
+                filter={"document_hash": {"$eq": document_hash}}, )
+            return bool(results and results.get("matches"))
         except Exception as e:
             logger.error(f"Duplicate check failed: {e}")
             return False

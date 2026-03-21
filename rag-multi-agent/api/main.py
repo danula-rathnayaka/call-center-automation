@@ -65,7 +65,7 @@ app.add_middleware(CORSMiddleware,
 from api.routes.chat import router as chat_router
 from api.routes.ingestion import router as ingestion_router
 from api.routes.knowledge import router as knowledge_router
-from api.routes.health import router as health_routerh
+from api.routes.health import router as health_router
 from api.routes.feedback import router as feedback_router
 from api.routes.tools_router import router as tools_router
 from api.handoff import router as handoff_router
