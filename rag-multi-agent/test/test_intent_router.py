@@ -3,8 +3,19 @@ import time
 
 import pytest
 from langchain_core.messages import AIMessage
+from sklearn.metrics import classification_report, confusion_matrix
 
 from multiagent_rag.graph.rag_router import IntentRouter
+
+tracker = {"y_true": [], "y_pred": []}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def report_metrics():
+    yield
+    print("\n\n=== Intent Router Metrics ===")
+    print(classification_report(tracker["y_true"], tracker["y_pred"], zero_division=0))
+    print(confusion_matrix(tracker["y_true"], tracker["y_pred"]))
 
 
 def load_data():
@@ -30,4 +41,8 @@ def test_intent_router(router, row):
         history.append(AIMessage(content=history_str))
 
     result = router.route(query, history)
+
+    tracker["y_true"].append(expected)
+    tracker["y_pred"].append(result)
+
     assert result == expected

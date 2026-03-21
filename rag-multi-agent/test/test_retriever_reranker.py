@@ -1,8 +1,19 @@
 import csv
 
 import pytest
+from sklearn.metrics import classification_report, confusion_matrix
 
 from multiagent_rag.agents.reranker import Reranker
+
+tracker = {"y_true": [], "y_pred": []}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def report_metrics():
+    yield
+    print("\n\n=== Reranker Metrics ===")
+    print(classification_report(tracker["y_true"], tracker["y_pred"], zero_division=0))
+    print(confusion_matrix(tracker["y_true"], tracker["y_pred"]))
 
 
 def load_data():
@@ -24,4 +35,9 @@ def test_reranker(reranker, row):
     docs = [{"content": target}, {"content": distractor}]
     result = reranker.rerank(query, docs, top_k=2)
 
-    assert result[0]["content"] == target
+    is_match = result[0]["content"] == target
+
+    tracker["y_true"].append("Hit")
+    tracker["y_pred"].append("Hit" if is_match else "Miss")
+
+    assert is_match

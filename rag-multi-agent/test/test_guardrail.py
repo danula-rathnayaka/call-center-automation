@@ -1,8 +1,19 @@
 import csv
 
 import pytest
+from sklearn.metrics import classification_report, confusion_matrix
 
 from multiagent_rag.agents.guardrail import Guardrail
+
+tracker = {"y_true": [], "y_pred": []}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def report_metrics():
+    yield
+    print("\n\n=== Guardrail Metrics ===")
+    print(classification_report(tracker["y_true"], tracker["y_pred"], zero_division=0))
+    print(confusion_matrix(tracker["y_true"], tracker["y_pred"]))
 
 
 def load_data():
@@ -22,6 +33,10 @@ def test_guardrail(guardrail, row):
     expected_sanitized = row["expected_sanitized_text"]
 
     val_result = guardrail.validate(input_text)
+
+    tracker["y_true"].append("Safe" if expected_safe else "Unsafe")
+    tracker["y_pred"].append("Safe" if val_result["safe"] else "Unsafe")
+
     assert val_result["safe"] == expected_safe
 
     sanitized_result = guardrail.sanitize_response(input_text)
