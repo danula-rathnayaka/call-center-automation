@@ -3,8 +3,7 @@ import os
 import sqlite3
 import time
 
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, END
 
@@ -24,6 +23,10 @@ from multiagent_rag.state.rag_state import RAGState
 from multiagent_rag.tools.crm_tools import get_dynamic_tools
 from multiagent_rag.utils.interaction_logger import InteractionLogger
 from multiagent_rag.utils.logger import get_logger
+from multiagent_rag.utils.session_store import (
+    load_history, save_history,
+    load_summary, save_summary,
+)
 from multiagent_rag.utils.stt import STTEngine
 
 logger = get_logger(__name__)
@@ -44,6 +47,29 @@ _summarizer = ConversationSummarizer()
 _tool_agent = ToolAgent()
 
 
+def session_manager_node(state: RAGState):
+    session_id = state.get("session_id", "")
+    if not session_id:
+        logger.warning("session_manager: no session_id in state, skipping load")
+        return {}
+
+    history = load_history(session_id)
+    summary = load_summary(session_id)
+
+    logger.info(
+        f"session_manager: loaded {len(history)} messages "
+        f"and {'a summary' if summary else 'no summary'} "
+        f"for session {session_id}"
+    )
+
+    result = {}
+    if history:
+        result["chat_history"] = history
+    if summary:
+        result["conversation_summary"] = summary
+    return result
+
+
 def stt_node(state: RAGState):
     start = time.time()
     audio_path = state.get("audio_path", "")
@@ -51,16 +77,12 @@ def stt_node(state: RAGState):
 
     if audio_path:
         logger.info("STT: Transcribing audio input")
-        transcribed_text = _stt_engine.transcribe(audio_path)
-        if not transcribed_text:
-            transcribed_text = query or "Unable to transcribe audio"
+        transcribed = _stt_engine.transcribe(audio_path)
+        if not transcribed:
+            transcribed = query or "Unable to transcribe audio"
             logger.warning("STT returned empty result, using fallback text")
-
         elapsed = round((time.time() - start) * 1000)
-        return {
-            "query": transcribed_text,
-            "latency_ms": {"stt": elapsed},
-        }
+        return {"query": transcribed, "latency_ms": {"stt": elapsed}}
 
     elapsed = round((time.time() - start) * 1000)
     return {"latency_ms": {"stt": elapsed}}
@@ -72,10 +94,8 @@ def emotion_node(state: RAGState):
     query = state.get("query", "")
 
     if audio_path:
-        logger.info("Emotion: Detecting emotion from audio")
         emotion_result = _emotion_agent.detect_from_audio(audio_path)
     else:
-        logger.info("Emotion: Detecting emotion from text")
         emotion_result = _emotion_agent.detect_from_text(query)
 
     elapsed = round((time.time() - start) * 1000)
@@ -86,33 +106,25 @@ def emotion_node(state: RAGState):
     }
 
 
-def history_summarizer_node(state: RAGState):
-    start = time.time()
-    history = state.get("chat_history", [])
-
-    if len(history) > 4:
-        summarized = _summarizer.summarize(history, keep_recent=4)
-        elapsed = round((time.time() - start) * 1000)
-        return {
-            "chat_history": summarized,
-            "latency_ms": {"history_summarizer": elapsed},
-        }
-
-    elapsed = round((time.time() - start) * 1000)
-    return {"latency_ms": {"history_summarizer": elapsed}}
-
-
 def guardrail_node(state: RAGState):
     start = time.time()
     query = state["query"]
+    history = state.get("chat_history", [])
 
-    result = _guardrail.validate(query)
+    result = _guardrail.validate(query, history)
     elapsed = round((time.time() - start) * 1000)
 
-    return {
+    updates = {
         "guardrail_passed": result["safe"],
         "latency_ms": {"guardrail": elapsed},
     }
+
+    if result["safe"]:
+        updates["query"] = result["sanitized_query"]
+    else:
+        updates["final_answer"] = result["reason"]
+
+    return updates
 
 
 def route_after_guardrail(state: RAGState):
@@ -123,6 +135,8 @@ def route_after_guardrail(state: RAGState):
     history = state.get("chat_history", [])
     intent = _router.route(query, history)
     logger.info(f"Query routed with intent: {intent}")
+
+    state["intent"] = intent
 
     if intent == "technical":
         return "contextualizer"
@@ -138,10 +152,10 @@ def route_after_guardrail(state: RAGState):
 
 def blocked_response_node(state: RAGState):
     query = state["query"]
-    answer = (
-        "I apologize, but I am unable to process that request. "
-        "Please rephrase your question related to our telecom services, "
-        "and I will be happy to assist you."
+    answer = state.get("final_answer") or (
+        "I am not able to process that request as stated. "
+        "Could you please rephrase your question? "
+        "I am here to help with anything related to our telecom services."
     )
     return {
         "final_answer": answer,
@@ -154,17 +168,9 @@ def contextualize_node(state: RAGState):
     start = time.time()
     query = state["query"]
     history = state.get("chat_history", [])
+    summary = state.get("conversation_summary")
 
-    if not history:
-        elapsed = round((time.time() - start) * 1000)
-        return {
-            "reformulated_query": query,
-            "intent": "technical",
-            "latency_ms": {"contextualizer": elapsed},
-        }
-
-    logger.info("Starting query contextualization")
-    new_query = _contextualizer.reformulate(query, history)
+    new_query = _contextualizer.reformulate(query, history, summary)
     elapsed = round((time.time() - start) * 1000)
     return {
         "reformulated_query": new_query,
@@ -176,13 +182,9 @@ def contextualize_node(state: RAGState):
 def query_decomposer_node(state: RAGState):
     start = time.time()
     query = state["reformulated_query"]
-
     sub_queries = _query_decomposer.decompose(query)
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "sub_queries": sub_queries,
-        "latency_ms": {"query_decomposer": elapsed},
-    }
+    return {"sub_queries": sub_queries, "latency_ms": {"query_decomposer": elapsed}}
 
 
 def retrieve_node(state: RAGState):
@@ -194,43 +196,34 @@ def retrieve_node(state: RAGState):
         sub_queries = [query]
 
     def _fetch(sq: str) -> list:
-        logger.info(f"Retrieving documents for sub-query: {sq}")
         return _retriever.retrieve(sq)
 
-    all_docs = []
+    all_docs: list = []
     seen_contents: set = set()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {executor.submit(_fetch, sq): sq for sq in sub_queries}
         for future in concurrent.futures.as_completed(futures):
             try:
-                docs = future.result()
-                for doc in docs:
-                    content_key = doc["content"][:100]
-                    if content_key not in seen_contents:
-                        seen_contents.add(content_key)
+                for doc in future.result():
+                    key = doc["content"][:100]
+                    if key not in seen_contents:
+                        seen_contents.add(key)
                         all_docs.append(doc)
             except Exception as e:
-                logger.error(f"Retrieval failed for sub-query: {str(e)}")
+                logger.error(f"Retrieval sub-query failed: {e}")
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "retrieved_docs": all_docs,
-        "latency_ms": {"retriever": elapsed},
-    }
+    return {"retrieved_docs": all_docs, "latency_ms": {"retriever": elapsed}}
 
 
 def reranker_node(state: RAGState):
     start = time.time()
     query = state.get("reformulated_query", state["query"])
     docs = state["retrieved_docs"]
-
     reranked = _reranker.rerank(query, docs, top_k=3)
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "retrieved_docs": reranked,
-        "latency_ms": {"reranker": elapsed},
-    }
+    return {"retrieved_docs": reranked, "latency_ms": {"reranker": elapsed}}
 
 
 def generate_node(state: RAGState):
@@ -238,13 +231,12 @@ def generate_node(state: RAGState):
     query = state["query"]
     docs = state["retrieved_docs"]
     history = state.get("chat_history", [])
+    summary = state.get("conversation_summary")
     emotion = state.get("emotion", "neutral")
-
-    logger.info(f"Starting emotion-aware response generation (emotion: {emotion})")
 
     context_text = _retriever.format_docs(docs)
 
-    answer = _finetuned_llm.generate(query, context_text, emotion, history)
+    answer = _finetuned_llm.generate(query, context_text, emotion, history, summary)
     answer = _guardrail.sanitize_response(answer)
 
     elapsed = round((time.time() - start) * 1000)
@@ -260,6 +252,7 @@ def casual_node(state: RAGState):
     query = state["query"]
     emotion = state.get("emotion", "neutral")
     intent = state.get("intent", "casual")
+    summary = state.get("conversation_summary")
 
     if intent == "escalation":
         context = (
@@ -269,10 +262,14 @@ def casual_node(state: RAGState):
             f"Customer emotion: {emotion}."
         )
     else:
-        emotion_hint = f"The customer's detected emotion is: {emotion}. "
-        context = emotion_hint + "User is normally chatting. Reply politely and warmly."
+        context = (
+            f"[Customer emotion: {emotion}] "
+            "User is making casual conversation. Reply politely and warmly."
+        )
 
-    answer = _generator.generate(query, context, state.get("chat_history", []))
+    answer = _generator.generate(
+        query, context, state.get("chat_history", []), summary
+    )
 
     elapsed = round((time.time() - start) * 1000)
     return {
@@ -288,18 +285,11 @@ def tool_agent_node(state: RAGState):
     query = state["query"]
     history = state.get("chat_history", [])
 
-    is_looping_from_tool = len(history) > 0 and history[-1].type == "tool"
+    is_looping = len(history) > 0 and history[-1].type == "tool"
+    messages_to_pass = history if is_looping else history + [HumanMessage(content=query)]
+    history_to_return = [] if is_looping else [HumanMessage(content=query)]
 
-    if not is_looping_from_tool:
-        messages_to_pass = history + [HumanMessage(content=query)]
-        history_to_return = [HumanMessage(content=query)]
-    else:
-        messages_to_pass = history
-        history_to_return = []
-
-    logger.info("Invoking tool agent")
     response = _tool_agent.invoke(query, messages_to_pass)
-
     history_to_return.append(response)
 
     elapsed = round((time.time() - start) * 1000)
@@ -315,23 +305,49 @@ def check_for_tool_calls(state: RAGState):
     history = state.get("chat_history", [])
     if not history:
         return "__end__"
-
-    last_message = history[-1]
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+    last = history[-1]
+    if hasattr(last, "tool_calls") and last.tool_calls:
         return "tools"
     return "__end__"
 
 
+def dynamic_tools_node(state: RAGState):
+    start = time.time()
+    history = state.get("chat_history", [])
+    last = history[-1]
+
+    if not hasattr(last, "tool_calls") or not last.tool_calls:
+        return {"latency_ms": {"tools": round((time.time() - start) * 1000)}}
+
+    tools_map = {t.name: t for t in get_dynamic_tools()}
+    new_messages = []
+
+    for tc in last.tool_calls:
+        if tc["name"] in tools_map:
+            try:
+                result = tools_map[tc["name"]].invoke(tc["args"])
+                tool_msg = ToolMessage(content=str(result), name=tc["name"], tool_call_id=tc["id"])
+            except Exception as e:
+                tool_msg = ToolMessage(content=f"Error: {e}", name=tc["name"], tool_call_id=tc["id"])
+        else:
+            tool_msg = ToolMessage(
+                content=f"Error: Tool {tc['name']} not found.",
+                name=tc["name"], tool_call_id=tc["id"]
+            )
+        new_messages.append(tool_msg)
+
+    elapsed = round((time.time() - start) * 1000)
+    return {"chat_history": new_messages, "latency_ms": {"tools": elapsed}}
+
+
 def confidence_evaluator_node(state: RAGState):
     start = time.time()
-    query = state.get("query", "")
-    response = state.get("final_answer", "")
-    retrieved_docs = state.get("retrieved_docs", [])
-    emotion = state.get("emotion", "neutral")
-
-    logger.info("Running confidence evaluation")
-    result = _confidence_agent.evaluate(query, response, retrieved_docs, emotion)
-
+    result = _confidence_agent.evaluate(
+        state.get("query", ""),
+        state.get("final_answer", ""),
+        state.get("retrieved_docs", []),
+        state.get("emotion", "neutral"),
+    )
     elapsed = round((time.time() - start) * 1000)
     return {
         "response_confidence": result.get("confidence_score", 0.5),
@@ -340,8 +356,37 @@ def confidence_evaluator_node(state: RAGState):
     }
 
 
+def history_summarizer_node(state: RAGState):
+    start = time.time()
+    history = state.get("chat_history", [])
+    summary = state.get("conversation_summary")
+
+    if len(history) <= 4:
+        elapsed = round((time.time() - start) * 1000)
+        return {"latency_ms": {"history_summarizer": elapsed}}
+
+    recent_history, new_summary = _summarizer.summarize(
+        history, keep_recent=4, existing_summary=summary
+    )
+
+    elapsed = round((time.time() - start) * 1000)
+    return {
+        "chat_history": recent_history,
+        "conversation_summary": new_summary,
+        "latency_ms": {"history_summarizer": elapsed},
+    }
+
+
 def interaction_logger_node(state: RAGState):
     session_id = state.get("session_id", "unknown")
+
+    history = state.get("chat_history", [])
+    summary = state.get("conversation_summary")
+
+    if session_id != "unknown":
+        save_history(session_id, history)
+        if summary:
+            save_summary(session_id, summary)
 
     _interaction_logger.log_interaction(
         session_id=session_id,
@@ -358,67 +403,11 @@ def interaction_logger_node(state: RAGState):
     return {"status": "completed"}
 
 
-def dynamic_tools_node(state: RAGState):
-    start = time.time()
-    history = state.get("chat_history", [])
-
-    last_message = history[-1]
-
-    if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
-        elapsed = round((time.time() - start) * 1000)
-        return {"latency_ms": {"tools": elapsed}}
-
-    logger.info(f"Executing dynamic tools: {[t['name'] for t in last_message.tool_calls]}")
-
-    current_tools_list = get_dynamic_tools()
-    tools_map = {tool.name: tool for tool in current_tools_list}
-
-    new_messages = []
-
-    for tool_call in last_message.tool_calls:
-        tool_name = tool_call["name"]
-        tool_args = tool_call["args"]
-        tool_call_id = tool_call["id"]
-
-        if tool_name in tools_map:
-            try:
-                # Invoke the dynamic tool
-                result = tools_map[tool_name].invoke(tool_args)
-                tool_msg = ToolMessage(
-                    content=str(result),
-                    name=tool_name,
-                    tool_call_id=tool_call_id
-                )
-            except Exception as e:
-                logger.error(f"Error executing tool {tool_name}: {e}")
-                tool_msg = ToolMessage(
-                    content=f"Error executing tool: {str(e)}",
-                    name=tool_name,
-                    tool_call_id=tool_call_id
-                )
-        else:
-            logger.warning(f"Tool {tool_name} was called but is not registered.")
-            tool_msg = ToolMessage(
-                content=f"Error: Tool {tool_name} not found or no longer available.",
-                name=tool_name,
-                tool_call_id=tool_call_id
-            )
-
-        new_messages.append(tool_msg)
-
-    elapsed = round((time.time() - start) * 1000)
-
-    return {
-        "chat_history": new_messages,
-        "latency_ms": {"tools": elapsed}
-    }
-
-
 workflow = StateGraph(RAGState)
 
+workflow.add_node("session_manager", session_manager_node)
 workflow.add_node("stt_processor", stt_node)
 workflow.add_node("emotion_detector", emotion_node)
-workflow.add_node("history_summarizer", history_summarizer_node)
 workflow.add_node("guardrail", guardrail_node)
 workflow.add_node("blocked_response", blocked_response_node)
 workflow.add_node("contextualizer", contextualize_node)
@@ -430,14 +419,15 @@ workflow.add_node("tool_agent", tool_agent_node)
 workflow.add_node("tools", dynamic_tools_node)
 workflow.add_node("casual_responder", casual_node)
 workflow.add_node("confidence_evaluator", confidence_evaluator_node)
+workflow.add_node("history_summarizer", history_summarizer_node)
 workflow.add_node("interaction_logger", interaction_logger_node)
 
-workflow.set_entry_point("stt_processor")
+workflow.set_entry_point("session_manager")
+
+workflow.add_edge("session_manager", "stt_processor")
 
 workflow.add_edge("stt_processor", "emotion_detector")
-workflow.add_edge("stt_processor", "history_summarizer")
 workflow.add_edge("emotion_detector", "guardrail")
-workflow.add_edge("history_summarizer", "guardrail")
 
 workflow.add_conditional_edges(
     "guardrail",
@@ -460,23 +450,18 @@ workflow.add_edge("generator", "confidence_evaluator")
 workflow.add_conditional_edges(
     "tool_agent",
     check_for_tool_calls,
-    {
-        "tools": "tools",
-        "__end__": "confidence_evaluator",
-    }
+    {"tools": "tools", "__end__": "confidence_evaluator"}
 )
 workflow.add_edge("tools", "tool_agent")
 
 workflow.add_edge("casual_responder", "confidence_evaluator")
-
 workflow.add_edge("blocked_response", "interaction_logger")
 
-workflow.add_edge("confidence_evaluator", "interaction_logger")
+workflow.add_edge("confidence_evaluator", "history_summarizer")
+workflow.add_edge("history_summarizer", "interaction_logger")
 workflow.add_edge("interaction_logger", END)
 
-_checkpoint_dir = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "data"
-)
+_checkpoint_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
 os.makedirs(_checkpoint_dir, exist_ok=True)
 _checkpoint_path = os.path.join(_checkpoint_dir, "checkpoints.db")
 _conn = sqlite3.connect(_checkpoint_path, check_same_thread=False)

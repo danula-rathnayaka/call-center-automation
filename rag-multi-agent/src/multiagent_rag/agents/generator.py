@@ -1,6 +1,8 @@
 import os
+from typing import List, Optional
 
 from dotenv import load_dotenv
+from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
@@ -10,6 +12,7 @@ from multiagent_rag.utils.logger import get_logger
 load_dotenv()
 
 logger = get_logger(__name__)
+
 
 class Generator:
     def __init__(self):
@@ -30,14 +33,31 @@ class Generator:
         ])
         self.chain = self.prompt | self.llm | StrOutputParser()
 
-    def generate(self, query: str, context: str, history: list) -> str:
+    def generate(
+            self,
+            query: str,
+            context: str,
+            history: List[BaseMessage],
+            summary: Optional[str] = None,
+    ) -> str:
+        """
+        Generate a response using context, recent history, and optional older summary.
+        The summary is injected as a SystemMessage before the history window so the
+        LLM has full conversational context without raw old messages inflating tokens.
+        """
         try:
+            augmented_history = list(history)
+            if summary:
+                augmented_history = [
+                                        SystemMessage(content=f"Summary of earlier conversation:\n{summary}")
+                                    ] + augmented_history
+
             response = self.chain.invoke({
                 "context": context,
                 "question": query,
-                "chat_history": history
+                "chat_history": augmented_history,
             })
             return response
         except Exception as e:
-            logger.error(f"Response generation failed: {str(e)}")
+            logger.error(f"Response generation failed: {e}")
             return "System Error: Could not generate response."

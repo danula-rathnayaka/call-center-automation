@@ -1,5 +1,8 @@
 import os
 import sys
+from typing import List, Optional
+
+from langchain_core.messages import BaseMessage
 
 from multiagent_rag.utils.logger import get_logger
 
@@ -27,20 +30,14 @@ class FinetunedLLMAgent:
 
             self._generate_fn = _pipeline.generate_response
             self._format_fn = _pipeline.format_prompt
-            logger.info("Fine-tuned LLM (finetuned-LLM/inference_pipeline.py) loaded and initialized")
+            logger.info("Fine-tuned LLM loaded and initialized")
             return True
 
         except (ImportError, ModuleNotFoundError) as e:
-            logger.warning(
-                f"Fine-tuned LLM inference_pipeline.py not importable ({str(e)}). "
-                "Using Groq as primary generator."
-            )
+            logger.warning(f"Fine-tuned LLM not importable ({e}). Using Groq fallback.")
             return False
         except Exception as e:
-            logger.error(
-                f"Fine-tuned LLM initialization failed: {str(e)}. "
-                "Using Groq as primary generator."
-            )
+            logger.error(f"Fine-tuned LLM init failed ({e}). Using Groq fallback.")
             return False
 
     def _get_fallback_generator(self):
@@ -49,37 +46,60 @@ class FinetunedLLMAgent:
             self._fallback_generator = Generator()
         return self._fallback_generator
 
-    def generate(self, query: str, context: str, emotion: str, history: list) -> str:
+    def generate(
+            self,
+            query: str,
+            context: str,
+            emotion: str,
+            history: List[BaseMessage],
+            summary: Optional[str] = None,
+    ) -> str:
         if self._pipeline_ready:
             try:
                 return self._call_finetuned_llm(query, context, emotion, history)
             except Exception as e:
-                logger.error(f"Fine-tuned LLM generation failed, falling back to Groq: {str(e)}")
+                logger.error(f"Fine-tuned LLM generation failed, falling back to Groq: {e}")
 
-        return self._groq_fallback(query, context, emotion, history)
+        return self._groq_fallback(query, context, emotion, history, summary)
 
-    def _call_finetuned_llm(self, query: str, context: str, emotion: str, history: list) -> str:
+    def _call_finetuned_llm(
+            self,
+            query: str,
+            context: str,
+            emotion: str,
+            history: List[BaseMessage],
+    ) -> str:
         history_lines = []
         for msg in history:
             role = "User" if msg.type == "human" else "Assistant"
             history_lines.append(f"{role}: {msg.content}")
+        history_text = "\n".join(history_lines)
 
         response = self._generate_fn(
             customer_query=query,
             facts=context,
             emotion=emotion,
+            history=history_text,
             max_new_tokens=300,
         )
         return str(response).strip()
 
-    def _groq_fallback(self, query: str, context: str, emotion: str, history: list) -> str:
+    def _groq_fallback(
+            self,
+            query: str,
+            context: str,
+            emotion: str,
+            history: List[BaseMessage],
+            summary: Optional[str] = None,
+    ) -> str:
         logger.info(f"Using Groq Generator as fallback (emotion: {emotion})")
         generator = self._get_fallback_generator()
 
         emotion_prefix = self._emotion_instruction(emotion)
         enriched_context = f"{emotion_prefix}\n\n{context}"
 
-        return generator.generate(query, enriched_context, history)
+        # Pass summary through to generator so it has full conversational context
+        return generator.generate(query, enriched_context, history, summary)
 
     def _emotion_instruction(self, emotion: str) -> str:
         instructions = {

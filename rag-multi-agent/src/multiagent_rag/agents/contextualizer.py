@@ -1,5 +1,7 @@
 import os
+from typing import List, Optional
 
+from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
@@ -7,6 +9,7 @@ from langchain_groq import ChatGroq
 from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
 
 class Contextualizer:
     def __init__(self):
@@ -27,13 +30,24 @@ class Contextualizer:
 
         self.chain = self.prompt | self.llm | StrOutputParser()
 
-    def reformulate(self, query: str, history: list) -> str:
-        if not history:
+    def reformulate(
+            self,
+            query: str,
+            history: List[BaseMessage],
+            summary: Optional[str] = None,
+    ) -> str:
+        if not history and not summary:
             return query
 
+        augmented_history = list(history)
+        if summary:
+            augmented_history = [
+                                    SystemMessage(content=f"Summary of earlier conversation:\n{summary}")
+                                ] + augmented_history
+
         new_query = self.chain.invoke({
-            "chat_history": history,
+            "chat_history": augmented_history,
             "input": query
         })
-        logger.info(f"Query reformulated. Original: '{query}' -> Reformulated: '{new_query}'")
+        logger.info(f"Query reformulated: '{query}' -> '{new_query}'")
         return new_query
