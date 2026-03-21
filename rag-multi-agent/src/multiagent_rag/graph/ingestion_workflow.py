@@ -3,12 +3,14 @@ from langgraph.graph import StateGraph, END
 
 from multiagent_rag.agents.doc_ingestor import DocIngestor
 from multiagent_rag.agents.pdf_ingestor import PDFIngestor
-from multiagent_rag.agents.url_ingestor import URLIngestor
+from multiagent_rag.graph.web_scraper_workflow import web_scraper_app
 from multiagent_rag.state.ingestion_state import IngestionState
 from multiagent_rag.utils.db_client import PineconeClient
 from multiagent_rag.utils.logger import get_logger
+from multiagent_rag.utils.sparse import SparseEmbeddingManager
 
 logger = get_logger(__name__)
+_sparse_manager = SparseEmbeddingManager()
 
 
 def pdf_extraction_node(state: IngestionState):
@@ -37,13 +39,23 @@ def doc_extraction_node(state: IngestionState):
 
 def url_extraction_node(state: IngestionState):
     url = state["file_path"]
-    logger.info(f"Starting URL extraction for: {url}")
+    logger.info(f"Starting web scraper pipeline for: {url}")
 
-    agent = URLIngestor()
-    chunks, doc_hash = agent.process(url)
+    result = web_scraper_app.invoke({
+        "file_path": url,
+        "chunks": [],
+        "document_hash": "",
+        "status": "start",
+        "scraped_pages": [],
+    })
 
-    if not chunks:
+    chunks = result.get("chunks", [])
+    doc_hash = result.get("document_hash", "")
+    status = result.get("status", "failed")
+
+    if not chunks or status == "failed":
         return {"chunks": [], "document_hash": doc_hash, "status": "failed"}
+
     return {"chunks": chunks, "document_hash": doc_hash, "status": "extracted"}
 
 
@@ -83,6 +95,26 @@ def save_to_db_node(state: IngestionState):
     return {"status": status}
 
 
+def bm25_refit_node(state: IngestionState):
+    if state.get("status") != "completed":
+        return {}
+
+    try:
+        client = PineconeClient()
+        texts = client.fetch_all_texts()
+
+        if not texts:
+            logger.warning("BM25 refit skipped — no texts returned from Pinecone")
+            return {}
+
+        _sparse_manager.fit_on_corpus(texts)
+        logger.info(f"BM25 refitted on {len(texts)} chunks after ingestion")
+    except Exception as e:
+        logger.error(f"BM25 refit failed (non-critical): {e}")
+
+    return {}
+
+
 def route_file_type(state: IngestionState):
     file_path = state["file_path"].lower()
 
@@ -110,6 +142,7 @@ workflow.add_node("doc_agent", doc_extraction_node)
 workflow.add_node("url_agent", url_extraction_node)
 workflow.add_node("duplicate_checker", duplicate_checker_node)
 workflow.add_node("db_saver", save_to_db_node)
+workflow.add_node("bm25_refit", bm25_refit_node)
 
 workflow.set_conditional_entry_point(
     route_file_type,
@@ -134,6 +167,7 @@ workflow.add_conditional_edges(
     }
 )
 
-workflow.add_edge("db_saver", END)
+workflow.add_edge("db_saver", "bm25_refit")
+workflow.add_edge("bm25_refit", END)
 
 ingestion_app = workflow.compile()

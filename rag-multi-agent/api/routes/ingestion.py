@@ -1,12 +1,16 @@
 import asyncio
 import os
-
-from fastapi import APIRouter, File, HTTPException, UploadFile
 from typing import List
 
 from api.schemas import IngestionResponse, URLIngestionRequest, BatchIngestionResponse
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
 from multiagent_rag.graph.ingestion_workflow import ingestion_app
 from multiagent_rag.utils.logger import get_logger
+from multiagent_rag.utils.scrape_review_store import (
+    get_pending_queue, get_queue_item,
+    approve_item, reject_item, get_stats,
+)
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/ingest", tags=["Ingestion"])
@@ -163,3 +167,57 @@ async def ingest_url(request: URLIngestionRequest):
     except Exception as e:
         logger.error(f"URL ingestion error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to ingest URL: {str(e)}")
+
+
+@router.get("/scrape/review")
+async def get_scrape_review_queue():
+    try:
+        return {"items": get_pending_queue(), "stats": get_stats()}
+    except Exception as e:
+        logger.error(f"Failed to fetch review queue: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/scrape/approve/{item_id}", response_model=IngestionResponse)
+async def approve_scraped_page(item_id: int):
+    try:
+        item = get_queue_item(item_id)
+        if not item:
+            raise HTTPException(status_code=404, detail=f"Review item {item_id} not found")
+        if item["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"Item {item_id} is already {item['status']}")
+
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, _run_ingestion, item["url"], item["url"]
+        )
+
+        approve_item(item_id)
+
+        return IngestionResponse(
+            status=result.status,
+            message=f"Page '{item['url']}' approved and ingested. {result.message}",
+            chunks_ingested=result.chunks_ingested,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to approve item {item_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/scrape/reject/{item_id}")
+async def reject_scraped_page(item_id: int):
+    try:
+        item = get_queue_item(item_id)
+        if not item:
+            raise HTTPException(status_code=404, detail=f"Review item {item_id} not found")
+        if item["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"Item {item_id} is already {item['status']}")
+
+        reject_item(item_id)
+        return {"status": "rejected", "item_id": item_id, "url": item["url"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to reject item {item_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

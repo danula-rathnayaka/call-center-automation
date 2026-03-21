@@ -45,6 +45,7 @@ dependencies = [
     "xgboost>=3.2.0",
     "pytest>=9.0.2",
     "pandas>=2.3.3",
+    "crawl4ai>=0.8.5",
 ]
 
 [tool.setuptools]
