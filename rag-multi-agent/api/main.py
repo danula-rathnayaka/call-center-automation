@@ -56,32 +56,19 @@ async def lifespan(app: FastAPI):
     logger.info("Multi-Agent RAG System shutting down.")
 
 
-app = FastAPI(
-    title="Multi-Agent RAG System API",
-    version="1.0.0",
-    lifespan=lifespan,
-)
+app = FastAPI(title="Multi-Agent RAG System API", version="1.0.0", lifespan=lifespan, )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://localhost:8501",
-        "*",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://localhost:8501",
+        "*", ], allow_credentials=True, allow_methods=["*"], allow_headers=["*"], )
 
 from api.routes.chat import router as chat_router
 from api.routes.ingestion import router as ingestion_router
 from api.routes.knowledge import router as knowledge_router
-from api.routes.health import router as health_router
+from api.routes.health import router as health_routerh
 from api.routes.feedback import router as feedback_router
 from api.routes.tools_router import router as tools_router
+from api.handoff import router as handoff_router
 
 app.include_router(chat_router)
 app.include_router(ingestion_router)
@@ -89,12 +76,9 @@ app.include_router(knowledge_router)
 app.include_router(health_router)
 app.include_router(feedback_router)
 app.include_router(tools_router)
+app.include_router(handoff_router)
 
 
 @app.get("/")
 async def root():
-    return {
-        "message": "Multi-Agent RAG System API",
-        "docs": "/docs",
-        "health": "/api/health",
-    }
+    return {"message": "Multi-Agent RAG System API", "docs": "/docs", "health": "/api/health", }
