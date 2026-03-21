@@ -19,6 +19,7 @@ def _get_connection() -> sqlite3.Connection:
     os.makedirs(os.path.dirname(os.path.abspath(_DB_PATH)), exist_ok=True)
     conn = sqlite3.connect(_DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
 

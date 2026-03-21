@@ -1,10 +1,7 @@
 import concurrent.futures
-import os
-import sqlite3
 import time
 
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, END
 
 from multiagent_rag.agents.confidence_agent import ConfidenceAgent
@@ -24,10 +21,7 @@ from multiagent_rag.tools.crm_tools import get_dynamic_tools
 from multiagent_rag.utils.human_handoff_store import enqueue_handoff
 from multiagent_rag.utils.interaction_logger import InteractionLogger
 from multiagent_rag.utils.logger import get_logger
-from multiagent_rag.utils.session_store import (
-    load_history, save_history,
-    load_summary, save_summary,
-)
+from multiagent_rag.utils.session_store import (load_history, save_history, load_summary, save_summary, )
 from multiagent_rag.utils.stt import STTEngine
 
 logger = get_logger(__name__)
@@ -52,23 +46,17 @@ def session_manager_node(state: RAGState):
     session_id = state.get("session_id", "")
     if not session_id:
         logger.warning("session_manager: no session_id in state, skipping load")
-        return {}
+        return {"chat_history": [], "should_escalate": False, "escalation_reason": None, }
 
     history = load_history(session_id)
     summary = load_summary(session_id)
 
-    logger.info(
-        f"session_manager: loaded {len(history)} messages "
-        f"and {'a summary' if summary else 'no summary'} "
-        f"for session {session_id}"
-    )
+    logger.info(f"session_manager: loaded {len(history)} messages "
+                f"and {'a summary' if summary else 'no summary'} "
+                f"for session {session_id}")
 
-    result = {}
-    if history:
-        result["chat_history"] = history
-    if summary:
-        result["conversation_summary"] = summary
-    return result
+    return {"chat_history": history, "conversation_summary": summary, "should_escalate": False,
+        "escalation_reason": None, }
 
 
 def stt_node(state: RAGState):
@@ -100,11 +88,8 @@ def emotion_node(state: RAGState):
         emotion_result = _emotion_agent.detect_from_text(query)
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "emotion": emotion_result.get("emotion", "neutral"),
-        "emotion_confidence": emotion_result.get("confidence", 0.0),
-        "latency_ms": {"emotion_detection": elapsed},
-    }
+    return {"emotion": emotion_result.get("emotion", "neutral"),
+        "emotion_confidence": emotion_result.get("confidence", 0.0), "latency_ms": {"emotion_detection": elapsed}, }
 
 
 def guardrail_node(state: RAGState):
@@ -113,10 +98,7 @@ def guardrail_node(state: RAGState):
     result = _guardrail.validate(query)
     elapsed = round((time.time() - start) * 1000)
 
-    updates = {
-        "guardrail_passed": result["safe"],
-        "latency_ms": {"guardrail": elapsed},
-    }
+    updates = {"guardrail_passed": result["safe"], "latency_ms": {"guardrail": elapsed}, }
 
     if not result["safe"]:
         updates["final_answer"] = result["reason"]
@@ -147,17 +129,12 @@ def route_after_guardrail(state: RAGState):
 
 def blocked_response_node(state: RAGState):
     query = state["query"]
-    answer = state.get("final_answer") or (
-        "I am not able to process that request as stated. "
-        "Could you please rephrase your question? "
-        "I am here to help with anything related to our telecom services."
-    )
+    answer = state.get("final_answer") or ("I am not able to process that request as stated. "
+                                           "Could you please rephrase your question? "
+                                           "I am here to help with anything related to our telecom services.")
     answer = _guardrail.sanitize_response(answer)
-    return {
-        "final_answer": answer,
-        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
-        "intent": "blocked",
-    }
+    return {"final_answer": answer, "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
+        "intent": "blocked", }
 
 
 def contextualize_node(state: RAGState):
@@ -168,11 +145,7 @@ def contextualize_node(state: RAGState):
 
     new_query = _contextualizer.reformulate(query, history, summary)
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "reformulated_query": new_query,
-        "intent": "technical",
-        "latency_ms": {"contextualizer": elapsed},
-    }
+    return {"reformulated_query": new_query, "intent": "technical", "latency_ms": {"contextualizer": elapsed}, }
 
 
 def query_decomposer_node(state: RAGState):
@@ -238,11 +211,8 @@ def generate_node(state: RAGState):
     answer = _guardrail.sanitize_response(answer)
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "final_answer": answer,
-        "chat_history": [HumanMessage(content=raw_query), AIMessage(content=answer)],
-        "latency_ms": {"generator": elapsed},
-    }
+    return {"final_answer": answer, "chat_history": [HumanMessage(content=raw_query), AIMessage(content=answer)],
+        "latency_ms": {"generator": elapsed}, }
 
 
 def casual_node(state: RAGState):
@@ -251,21 +221,15 @@ def casual_node(state: RAGState):
     emotion = state.get("emotion", "neutral")
     summary = state.get("conversation_summary")
 
-    context = (
-        f"[Customer emotion: {emotion}] "
-        "User is making casual conversation. Reply politely and warmly."
-    )
+    context = (f"[Customer emotion: {emotion}] "
+               "User is making casual conversation. Reply politely and warmly.")
 
     answer = _generator.generate(query, context, state.get("chat_history", []), summary)
     answer = _guardrail.sanitize_response(answer)
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "final_answer": answer,
-        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
-        "intent": "casual",
-        "latency_ms": {"casual_responder": elapsed},
-    }
+    return {"final_answer": answer, "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
+        "intent": "casual", "latency_ms": {"casual_responder": elapsed}, }
 
 
 def escalation_responder_node(state: RAGState):
@@ -274,25 +238,19 @@ def escalation_responder_node(state: RAGState):
     emotion = state.get("emotion", "neutral")
     summary = state.get("conversation_summary")
 
-    context = (
-        "The customer has explicitly requested to speak with a human agent. "
-        "Acknowledge their request warmly and empathetically. "
-        "Let them know their concern has been noted and a specialist will assist them shortly. "
-        f"Customer emotion: {emotion}."
-    )
+    context = ("The customer has explicitly requested to speak with a human agent. "
+               "Acknowledge their request warmly and empathetically. "
+               "Let them know their concern has been noted and a specialist will assist them shortly. "
+               f"Customer emotion: {emotion}.")
 
     answer = _generator.generate(query, context, state.get("chat_history", []), summary)
     answer = _guardrail.sanitize_response(answer)
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "final_answer": answer,
-        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
-        "intent": "escalation",
-        "should_escalate": True,
+    return {"final_answer": answer, "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
+        "intent": "escalation", "should_escalate": True,
         "escalation_reason": "Customer explicitly requested human agent",
-        "latency_ms": {"escalation_responder": elapsed},
-    }
+        "latency_ms": {"escalation_responder": elapsed}, }
 
 
 def tool_agent_node(state: RAGState):
@@ -313,12 +271,8 @@ def tool_agent_node(state: RAGState):
     final_answer = "" if has_tool_calls else clean_content
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "chat_history": history_to_return,
-        "final_answer": final_answer,
-        "intent": "customer_service",
-        "latency_ms": {"tool_agent": elapsed},
-    }
+    return {"chat_history": history_to_return, "final_answer": final_answer, "intent": "customer_service",
+        "latency_ms": {"tool_agent": elapsed}, }
 
 
 def check_for_tool_calls(state: RAGState):
@@ -350,10 +304,8 @@ def dynamic_tools_node(state: RAGState):
             except Exception as e:
                 tool_msg = ToolMessage(content=f"Error: {e}", name=tc["name"], tool_call_id=tc["id"])
         else:
-            tool_msg = ToolMessage(
-                content=f"Error: Tool {tc['name']} not found.",
-                name=tc["name"], tool_call_id=tc["id"]
-            )
+            tool_msg = ToolMessage(content=f"Error: Tool {tc['name']} not found.", name=tc["name"],
+                tool_call_id=tc["id"])
         new_messages.append(tool_msg)
 
     elapsed = round((time.time() - start) * 1000)
@@ -362,18 +314,11 @@ def dynamic_tools_node(state: RAGState):
 
 def confidence_evaluator_node(state: RAGState):
     start = time.time()
-    result = _confidence_agent.evaluate(
-        state.get("query", ""),
-        state.get("final_answer", ""),
-        state.get("retrieved_docs", []),
-        state.get("emotion", "neutral"),
-    )
+    result = _confidence_agent.evaluate(state.get("query", ""), state.get("final_answer", ""),
+        state.get("retrieved_docs", []), state.get("emotion", "neutral"), )
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "response_confidence": result.get("confidence_score", 0.5),
-        "should_escalate": result.get("should_escalate", False),
-        "latency_ms": {"confidence_evaluator": elapsed},
-    }
+    return {"response_confidence": result.get("confidence_score", 0.5),
+        "should_escalate": result.get("should_escalate", False), "latency_ms": {"confidence_evaluator": elapsed}, }
 
 
 def history_summarizer_node(state: RAGState):
@@ -385,16 +330,11 @@ def history_summarizer_node(state: RAGState):
         elapsed = round((time.time() - start) * 1000)
         return {"latency_ms": {"history_summarizer": elapsed}}
 
-    recent_history, new_summary = _summarizer.summarize(
-        history, keep_recent=4, existing_summary=summary
-    )
+    recent_history, new_summary = _summarizer.summarize(history, keep_recent=4, existing_summary=summary)
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "chat_history": recent_history,
-        "conversation_summary": new_summary,
-        "latency_ms": {"history_summarizer": elapsed},
-    }
+    return {"chat_history": recent_history, "conversation_summary": new_summary,
+        "latency_ms": {"history_summarizer": elapsed}, }
 
 
 def human_handoff_node(state: RAGState):
@@ -403,38 +343,24 @@ def human_handoff_node(state: RAGState):
     query = state.get("query", "")
     reason = state.get("escalation_reason", "Low confidence score")
 
-    holding_message = (
-        "I want to make sure you get the best help possible. "
-        "I am connecting you with one of our specialists right now. "
-        f"Your reference number is {session_id[:8].upper()}. "
-        "Please hold for a moment."
-    )
+    holding_message = ("I want to make sure you get the best help possible. "
+                       "I am connecting you with one of our specialists right now. "
+                       f"Your reference number is {session_id[:8].upper()}. "
+                       "Please hold for a moment.")
 
     try:
-        handoff_id = enqueue_handoff(
-            session_id=session_id,
-            query=query,
-            final_answer=state.get("final_answer", ""),
-            emotion=state.get("emotion", "neutral"),
-            emotion_confidence=state.get("emotion_confidence", 0.0),
-            response_confidence=state.get("response_confidence", 0.0),
-            escalation_reason=reason,
-            intent=state.get("intent", "unknown"),
-            chat_history=state.get("chat_history", []),
-            conversation_summary=state.get("conversation_summary"),
-            latency_ms=state.get("latency_ms", {}),
-        )
+        handoff_id = enqueue_handoff(session_id=session_id, query=query, final_answer=state.get("final_answer", ""),
+            emotion=state.get("emotion", "neutral"), emotion_confidence=state.get("emotion_confidence", 0.0),
+            response_confidence=state.get("response_confidence", 0.0), escalation_reason=reason,
+            intent=state.get("intent", "unknown"), chat_history=state.get("chat_history", []),
+            conversation_summary=state.get("conversation_summary"), latency_ms=state.get("latency_ms", {}), )
         logger.info(f"Human handoff queued (id={handoff_id}) for session {session_id}")
     except Exception as e:
         logger.error(f"Failed to enqueue handoff for session {session_id}: {e}")
 
     elapsed = round((time.time() - start) * 1000)
-    return {
-        "final_answer": holding_message,
-        "should_escalate": True,
-        "escalation_reason": reason,
-        "latency_ms": {"human_handoff": elapsed},
-    }
+    return {"final_answer": holding_message, "should_escalate": True, "escalation_reason": reason,
+        "latency_ms": {"human_handoff": elapsed}, }
 
 
 def route_after_confidence(state: RAGState) -> str:
@@ -454,19 +380,12 @@ def interaction_logger_node(state: RAGState):
         if summary:
             save_summary(session_id, summary)
 
-    _interaction_logger.log_interaction(
-        session_id=session_id,
-        query=state.get("query", ""),
-        response=state.get("final_answer", ""),
-        emotion=state.get("emotion", "neutral"),
+    _interaction_logger.log_interaction(session_id=session_id, query=state.get("query", ""),
+        response=state.get("final_answer", ""), emotion=state.get("emotion", "neutral"),
         emotion_confidence=state.get("emotion_confidence", 0.0),
-        response_confidence=state.get("response_confidence", 0.0),
-        should_escalate=state.get("should_escalate", False),
-        escalation_reason=state.get("escalation_reason", ""),
-        intent=state.get("intent", "unknown"),
-        retrieved_docs_count=len(state.get("retrieved_docs", [])),
-        latency_ms=state.get("latency_ms", {}),
-    )
+        response_confidence=state.get("response_confidence", 0.0), should_escalate=state.get("should_escalate", False),
+        escalation_reason=state.get("escalation_reason", ""), intent=state.get("intent", "unknown"),
+        retrieved_docs_count=len(state.get("retrieved_docs", [])), latency_ms=state.get("latency_ms", {}), )
     return {"status": "completed"}
 
 
@@ -497,17 +416,9 @@ workflow.add_edge("session_manager", "stt_processor")
 workflow.add_edge("stt_processor", "emotion_detector")
 workflow.add_edge("emotion_detector", "guardrail")
 
-workflow.add_conditional_edges(
-    "guardrail",
-    route_after_guardrail,
-    {
-        "contextualizer": "contextualizer",
-        "tool_agent": "tool_agent",
-        "casual_responder": "casual_responder",
-        "escalation_responder": "escalation_responder",
-        "blocked_response": "blocked_response",
-    }
-)
+workflow.add_conditional_edges("guardrail", route_after_guardrail,
+    {"contextualizer": "contextualizer", "tool_agent": "tool_agent", "casual_responder": "casual_responder",
+        "escalation_responder": "escalation_responder", "blocked_response": "blocked_response", })
 
 workflow.add_edge("contextualizer", "query_decomposer")
 workflow.add_edge("query_decomposer", "retriever")
@@ -515,33 +426,19 @@ workflow.add_edge("retriever", "reranker")
 workflow.add_edge("reranker", "generator")
 workflow.add_edge("generator", "confidence_evaluator")
 
-workflow.add_conditional_edges(
-    "tool_agent",
-    check_for_tool_calls,
-    {"tools": "tools", "__end__": "confidence_evaluator"}
-)
+workflow.add_conditional_edges("tool_agent", check_for_tool_calls,
+    {"tools": "tools", "__end__": "confidence_evaluator"})
 workflow.add_edge("tools", "tool_agent")
 
 workflow.add_edge("casual_responder", "confidence_evaluator")
 workflow.add_edge("escalation_responder", "human_handoff")
 workflow.add_edge("blocked_response", "interaction_logger")
 
-workflow.add_conditional_edges(
-    "confidence_evaluator",
-    route_after_confidence,
-    {
-        "human_handoff": "human_handoff",
-        "history_summarizer": "history_summarizer",
-    }
-)
+workflow.add_conditional_edges("confidence_evaluator", route_after_confidence,
+    {"human_handoff": "human_handoff", "history_summarizer": "history_summarizer", })
 
 workflow.add_edge("human_handoff", "interaction_logger")
 workflow.add_edge("history_summarizer", "interaction_logger")
 workflow.add_edge("interaction_logger", END)
 
-_checkpoint_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")
-os.makedirs(_checkpoint_dir, exist_ok=True)
-_checkpoint_path = os.path.join(_checkpoint_dir, "checkpoints.db")
-_conn = sqlite3.connect(_checkpoint_path, check_same_thread=False)
-memory = SqliteSaver(_conn)
-rag_app = workflow.compile(checkpointer=memory)
+rag_app = workflow.compile()

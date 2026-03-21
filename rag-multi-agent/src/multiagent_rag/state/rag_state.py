@@ -1,7 +1,12 @@
 from typing import TypedDict, List, Annotated, Dict, Optional
 
 from langchain_core.messages import BaseMessage
-from langgraph.graph.message import add_messages
+
+
+def replace_messages(current: List[BaseMessage], update: List[BaseMessage]) -> List[BaseMessage]:
+    if update is None:
+        return current or []
+    return update
 
 
 def merge_dicts(a: Dict[str, float], b: Dict[str, float]) -> Dict[str, float]:
@@ -23,7 +28,7 @@ class RAGState(TypedDict):
     intent: str
     guardrail_passed: bool
     final_answer: str
-    chat_history: Annotated[List[BaseMessage], add_messages]
+    chat_history: Annotated[List[BaseMessage], replace_messages]
     conversation_summary: Optional[str]
     response_confidence: float
     should_escalate: bool
