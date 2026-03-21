@@ -109,9 +109,7 @@ def emotion_node(state: RAGState):
 def guardrail_node(state: RAGState):
     start = time.time()
     query = state["query"]
-    history = state.get("chat_history", [])
-
-    result = _guardrail.validate(query, history)
+    result = _guardrail.validate(query)
     elapsed = round((time.time() - start) * 1000)
 
     updates = {
@@ -119,9 +117,7 @@ def guardrail_node(state: RAGState):
         "latency_ms": {"guardrail": elapsed},
     }
 
-    if result["safe"]:
-        updates["query"] = result["sanitized_query"]
-    else:
+    if not result["safe"]:
         updates["final_answer"] = result["reason"]
 
     return updates
@@ -166,7 +162,7 @@ def blocked_response_node(state: RAGState):
 
 def contextualize_node(state: RAGState):
     start = time.time()
-    query = state["query"]
+    query = _guardrail.pii.sanitize_for_rag(state["query"])
     history = state.get("chat_history", [])
     summary = state.get("conversation_summary")
 
@@ -228,7 +224,8 @@ def reranker_node(state: RAGState):
 
 def generate_node(state: RAGState):
     start = time.time()
-    query = state["query"]
+    raw_query = state["query"]
+    safe_query = _guardrail.pii.sanitize_for_rag(raw_query)
     docs = state["retrieved_docs"]
     history = state.get("chat_history", [])
     summary = state.get("conversation_summary")
@@ -236,13 +233,13 @@ def generate_node(state: RAGState):
 
     context_text = _retriever.format_docs(docs)
 
-    answer = _finetuned_llm.generate(query, context_text, emotion, history, summary)
+    answer = _finetuned_llm.generate(safe_query, context_text, emotion, history, summary)
     answer = _guardrail.sanitize_response(answer)
 
     elapsed = round((time.time() - start) * 1000)
     return {
         "final_answer": answer,
-        "chat_history": [HumanMessage(content=query), AIMessage(content=answer)],
+        "chat_history": [HumanMessage(content=raw_query), AIMessage(content=answer)],
         "latency_ms": {"generator": elapsed},
     }
 
@@ -290,12 +287,14 @@ def tool_agent_node(state: RAGState):
     history_to_return = [] if is_looping else [HumanMessage(content=query)]
 
     response = _tool_agent.invoke(query, messages_to_pass)
+    clean_content = _guardrail.sanitize_response(response.content)
+    response.content = clean_content
     history_to_return.append(response)
 
     elapsed = round((time.time() - start) * 1000)
     return {
         "chat_history": history_to_return,
-        "final_answer": response.content,
+        "final_answer": clean_content,
         "intent": "customer_service",
         "latency_ms": {"tool_agent": elapsed},
     }
