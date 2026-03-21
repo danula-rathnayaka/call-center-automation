@@ -7,13 +7,23 @@ from langchain_core.documents import Document
 from pinecone import Pinecone, ServerlessSpec
 
 from multiagent_rag.utils.embeddings import EmbeddingManager
-from multiagent_rag.utils.sparse import SparseEmbeddingManager
-
 from multiagent_rag.utils.logger import get_logger
+from multiagent_rag.utils.sparse import SparseEmbeddingManager
 
 load_dotenv()
 
 logger = get_logger(__name__)
+
+_ALPHA_BY_INTENT = {
+    "technical": 0.3,
+    "customer_service": 0.4,
+    "casual": 0.8,
+    "escalation": 0.7,
+    "blocked": 0.5,
+    "unknown": 0.5,
+}
+_DEFAULT_ALPHA = 0.5
+
 
 class PineconeClient:
     _instance = None
@@ -33,7 +43,6 @@ class PineconeClient:
             raise ValueError("PINECONE_API_KEY not found in environment variables")
 
         self._pc_client = Pinecone(api_key=api_key)
-
         existing_indexes = [i.name for i in self._pc_client.list_indexes()]
 
         if self._index_name not in existing_indexes:
@@ -44,69 +53,100 @@ class PineconeClient:
                 metric="dotproduct",
                 spec=ServerlessSpec(cloud="aws", region="us-east-1")
             )
-            while not self._pc_client.describe_index(self._index_name).status['ready']:
+            while not self._pc_client.describe_index(self._index_name).status["ready"]:
                 time.sleep(1)
 
         logger.info("Connection to Pinecone successful")
         self._index = self._pc_client.Index(self._index_name)
-
         self._dense_manager = EmbeddingManager()
         self._sparse_manager = SparseEmbeddingManager()
 
-    def insert_documents(self, documents: list):
+    def insert_documents(self, documents: list) -> bool:
         if not documents:
             return False
 
         try:
-            logger.info(f"Processing {len(documents)} documents for hybrid search insertion")
-
             texts = [doc.page_content for doc in documents]
-
             dense_vectors = self._dense_manager.get_embeddings(texts)
-
             vectors_to_upsert = []
 
             for i, doc in enumerate(documents):
                 sparse_vector = self._sparse_manager.get_sparse_vector(doc.page_content)
-
                 unique_id = f"doc_{uuid.uuid4()}"
-
                 vectors_to_upsert.append({
                     "id": unique_id,
                     "values": dense_vectors[i],
                     "sparse_values": sparse_vector,
-                    "metadata": doc.metadata | {"text": doc.page_content}
+                    "metadata": doc.metadata | {"text": doc.page_content},
                 })
 
             self._index.upsert(vectors=vectors_to_upsert)
-            logger.info(f"Successfully upserted {len(vectors_to_upsert)} hybrid vectors to Pinecone")
+            logger.info(f"Upserted {len(vectors_to_upsert)} hybrid vectors to Pinecone")
             return True
 
         except Exception as e:
-            logger.error(f"Failed to insert documents into Pinecone: {str(e)}")
+            logger.error(f"Failed to insert documents: {e}")
             return False
 
-    def search(self, query: str, k: int = 5):
+    def search(self, query: str, k: int = 5, intent: str = "unknown") -> list:
         try:
+            alpha = _ALPHA_BY_INTENT.get(intent, _DEFAULT_ALPHA)
             dense_query = self._dense_manager.get_embedding(query)
             sparse_query = self._sparse_manager.get_sparse_query(query)
 
+            scaled_dense = [v * alpha for v in dense_query]
+            scaled_sparse = {
+                "indices": sparse_query["indices"],
+                "values": [v * (1 - alpha) for v in sparse_query["values"]],
+            }
+
+            logger.info(f"Hybrid search | intent={intent} alpha={alpha} | query: {query[:60]}")
+
             results = self._index.query(
-                vector=dense_query,
-                sparse_vector=sparse_query,
+                vector=scaled_dense,
+                sparse_vector=scaled_sparse,
                 top_k=k,
-                include_metadata=True
+                include_metadata=True,
             )
 
             docs = []
-            for match in results['matches']:
-                text_content = match['metadata'].pop('text', '')
-                docs.append(Document(page_content=text_content, metadata=match['metadata']))
+            for match in results["matches"]:
+                text_content = match["metadata"].pop("text", "")
+                docs.append(Document(page_content=text_content, metadata=match["metadata"]))
 
             return docs
 
         except Exception as e:
-            logger.error(f"Hybrid search operation failed: {str(e)}")
+            logger.error(f"Hybrid search failed: {e}")
+            return []
+
+    def fetch_all_texts(self, batch_size: int = 100) -> list:
+        texts = []
+        try:
+            stats = self._index.describe_index_stats()
+            total = stats.get("total_vector_count", 0)
+            dummy_vec = [0.0] * 384
+
+            if total == 0:
+                logger.warning("Index is empty — no texts to fetch for BM25 fitting")
+                return []
+
+            results = self._index.query(
+                vector=dummy_vec,
+                top_k=min(total, 10000),
+                include_metadata=True,
+            )
+
+            for match in results.get("matches", []):
+                text = match.get("metadata", {}).get("text", "")
+                if text.strip():
+                    texts.append(text)
+
+            logger.info(f"Fetched {len(texts)} texts from Pinecone for BM25 fitting")
+            return texts
+
+        except Exception as e:
+            logger.error(f"Failed to fetch texts from Pinecone: {e}")
             return []
 
     def check_duplicate(self, document_hash: str) -> bool:
@@ -116,42 +156,18 @@ class PineconeClient:
                 vector=dummy_vector,
                 top_k=1,
                 include_metadata=True,
-                filter={"document_hash": {"$eq": document_hash}}
+                filter={"document_hash": {"$eq": document_hash}},
             )
             if results and results.get("matches"):
-                logger.info(f"Duplicate document detected with hash: {document_hash}")
                 return True
             return False
         except Exception as e:
-            logger.error(f"Duplicate check failed: {str(e)}")
+            logger.error(f"Duplicate check failed: {e}")
             return False
 
     def delete_all(self):
         try:
             self._index.delete(delete_all=True)
-            logger.info("Successfully wiped all data from the Pinecone index")
+            logger.info("Wiped all data from Pinecone index")
         except Exception as e:
-            logger.error(f"Failed to wipe Pinecone index data: {str(e)}")
-
-
-if __name__ == '__main__':
-    client = PineconeClient()
-
-    sample_text = "Error 503: The Huawei B310 router service is unavailable."
-    sample_meta = {"source": "hybrid_test"}
-
-    doc = Document(page_content=sample_text, metadata=sample_meta)
-
-    print("\n--- Testing Hybrid Insertion ---")
-    client.insert_documents([doc])
-    time.sleep(2)
-
-    print("\n--- Testing Hybrid Search ---")
-    query = "Error 503"
-    results = client.search(query, k=1)
-
-    if results:
-        print("Search Successful!")
-        print(f"Content: {results[0].page_content}")
-    else:
-        print("Search returned no results.")
+            logger.error(f"Failed to wipe Pinecone index: {e}")

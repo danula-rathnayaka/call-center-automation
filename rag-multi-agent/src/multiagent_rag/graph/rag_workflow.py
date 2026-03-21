@@ -187,12 +187,13 @@ def retrieve_node(state: RAGState):
     start = time.time()
     sub_queries = state.get("sub_queries", [])
     query = state.get("reformulated_query", state["query"])
+    intent = state.get("intent", "unknown")
 
     if not sub_queries:
         sub_queries = [query]
 
     def _fetch(sq: str) -> list:
-        return _retriever.retrieve(sq)
+        return _retriever.retrieve(sq, intent=intent)
 
     all_docs: list = []
     seen_contents: set = set()

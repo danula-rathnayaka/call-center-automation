@@ -1,11 +1,17 @@
 import os
+from typing import List
 
 from pinecone_text.sparse import BM25Encoder
-
 
 from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+_DEFAULT_JSON_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "..", "..", "..", "tools", "BM25", "bm25_params.json"
+)
+
 
 class SparseEmbeddingManager:
     _instance = None
@@ -18,27 +24,38 @@ class SparseEmbeddingManager:
         return cls._instance
 
     def _initialize_model(self):
-        current_file_path = os.path.abspath(__file__)
-
-        utils_dir = os.path.dirname(current_file_path)
-        multiagent_rag_dir = os.path.dirname(utils_dir)
-        src_dir = os.path.dirname(multiagent_rag_dir)
-        project_root = os.path.dirname(src_dir)
-
-        abs_json_path = os.path.join(project_root, "tools", "BM25", "bm25_params.json")
-
-        if os.path.exists(abs_json_path):
-            logger.info(f"Loading BM25 parameters from local file: {abs_json_path}")
-            self._encoder = BM25Encoder().load(abs_json_path)
+        abs_path = os.path.abspath(_DEFAULT_JSON_PATH)
+        if os.path.exists(abs_path):
+            logger.info(f"Loading BM25 parameters from: {abs_path}")
+            self._encoder = BM25Encoder().load(abs_path)
         else:
-            logger.info("Local BM25 parameters not found. Downloading default...")
+            logger.warning("BM25 params not found — using default MS MARCO weights. Run refit_bm25.py after ingestion.")
             self._encoder = BM25Encoder().default()
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+            self._encoder.dump(abs_path)
+            logger.info(f"Saved default BM25 params to {abs_path}")
 
-            directory = os.path.dirname(abs_json_path)
-            os.makedirs(directory, exist_ok=True)
+    def fit_on_corpus(self, texts: List[str], save_path: str = None):
+        if not texts:
+            logger.warning("fit_on_corpus called with empty text list — skipping")
+            return
 
-            self._encoder.dump(abs_json_path)
-            logger.info(f"Saved default BM25 parameters to {abs_json_path}")
+        logger.info(f"Fitting BM25 on {len(texts)} documents...")
+        self._encoder = BM25Encoder()
+        self._encoder.fit(texts)
+
+        path = save_path or os.path.abspath(_DEFAULT_JSON_PATH)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        self._encoder.dump(path)
+        logger.info(f"BM25 refitted and saved to {path}")
+
+    def reload(self, path: str = None):
+        load_path = path or os.path.abspath(_DEFAULT_JSON_PATH)
+        if not os.path.exists(load_path):
+            logger.error(f"Cannot reload — file not found: {load_path}")
+            return
+        self._encoder = BM25Encoder().load(load_path)
+        logger.info(f"BM25 encoder reloaded from {load_path}")
 
     def get_sparse_vector(self, text: str):
         return self._encoder.encode_documents(text)
