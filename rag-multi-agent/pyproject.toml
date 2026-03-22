@@ -47,6 +47,12 @@ dependencies = [
     "pandas>=2.3.3",
     "crawl4ai>=0.8.5",
     "tenacity>=9.1.2",
+    "tensorflow>=2.21.0",
+    "tf-keras>=2.21.0",
+    "librosa>=0.11.0",
+    "bitsandbytes-windows>=0.37.5",
+    "huggingface-hub[hf-xet]>=0.36.0",
+    "hf-xet>=1.2.0",
 ]
 
 [tool.setuptools]

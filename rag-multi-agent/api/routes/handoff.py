@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/handoff", tags=["Human Handoff"])
 @router.get("/queue")
 async def get_handoff_queue():
     try:
-        return {"items": get_pending_handoffs(), "stats": get_handoff_stats(), }
+        return {"items": get_pending_handoffs(), "stats": get_handoff_stats()}
     except Exception as e:
         logger.error(f"Failed to fetch handoff queue: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -10,12 +10,20 @@ logger = get_logger(__name__)
 class EmotionAgent:
 
     def __init__(self):
-        self._model = self._load_model()
+        self._model = False
+        self._predict_fn = None
+        self._model_path = None
+        self._load_model()
 
     def _load_model(self):
         try:
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
             emotion_model_dir = os.path.join(project_root, "emotion-model")
+            model_path = os.path.join(emotion_model_dir, "models", "emotion_model_final_v2.keras")
+
+            if not os.path.exists(model_path):
+                logger.warning(f"Emotion model file not found at {model_path}. Using keyword fallback.")
+                return
 
             if emotion_model_dir not in sys.path:
                 sys.path.insert(0, emotion_model_dir)
@@ -24,41 +32,60 @@ class EmotionAgent:
                 os.path.join(emotion_model_dir, "main.py"))
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            self._detect_fn = module.detect_emotion
-            logger.info("Emotion model loaded from emotion-model/main.py")
-            return True
-        except (ImportError, ModuleNotFoundError, Exception) as e:
+
+            self._predict_fn = module.predict_emotion
+            self._model_path = model_path
+            self._model = True
+            logger.info("Emotion model loaded successfully")
+
+        except Exception as e:
             logger.warning(f"Emotion model not available ({e}). Using keyword fallback.")
-            self._detect_fn = None
-            return False
+            self._model = False
+            self._predict_fn = None
 
     def detect_from_audio(self, audio_path: str) -> dict:
-        try:
-            if self._model and self._detect_fn is not None:
-                result = self._detect_fn(audio_path)
-                if result is not None:
-                    return self._normalize_result(result)
-            logger.info("Emotion model not implemented — returning neutral for audio")
-            return {"emotion": "neutral", "confidence": 0.0}
-        except Exception as e:
-            logger.error(f"Emotion detection from audio failed: {e}")
-            return {"emotion": "neutral", "confidence": 0.0}
+        if self._model and self._predict_fn and audio_path:
+            try:
+                result = self._run_prediction(audio_path)
+                if result:
+                    return result
+            except Exception as e:
+                logger.error(f"Emotion detection from audio failed: {e}")
+        return {"emotion": "neutral", "confidence": 0.0}
 
     def detect_from_text(self, text: str) -> dict:
-        try:
-            if self._model and self._detect_fn is not None:
-                result = self._detect_fn(text)
-                if result is not None:
-                    return self._normalize_result(result)
-            return self._keyword_fallback(text)
-        except Exception as e:
-            logger.error(f"Emotion detection from text failed: {e}")
-            return self._keyword_fallback(text)
+        return self._keyword_fallback(text)
 
-    def _normalize_result(self, result) -> dict:
-        if isinstance(result, dict):
-            return {"emotion": result.get("emotion", "neutral"), "confidence": float(result.get("confidence", 0.0))}
-        return {"emotion": str(result), "confidence": 1.0}
+    def _run_prediction(self, audio_path: str) -> dict:
+        import io
+        from contextlib import redirect_stdout
+
+        captured = io.StringIO()
+        with redirect_stdout(captured):
+            self._predict_fn(audio_path, self._model_path)
+
+        output = captured.getvalue()
+
+        classes = ["Angry", "Sad", "Neutral", "Happy"]
+        probs = {}
+        best_class = "Neutral"
+        best_prob = 0.0
+
+        for line in output.splitlines():
+            for cls in classes:
+                if line.strip().startswith(cls):
+                    try:
+                        prob = float(line.split(":")[1].strip().replace("%", "")) / 100.0
+                        probs[cls] = prob
+                        if prob > best_prob:
+                            best_prob = prob
+                            best_class = cls
+                    except (IndexError, ValueError):
+                        pass
+
+        emotion_map = {"Angry": "angry", "Sad": "sad", "Neutral": "neutral", "Happy": "happy", }
+
+        return {"emotion": emotion_map.get(best_class, "neutral"), "confidence": round(best_prob, 3), }
 
     def _keyword_fallback(self, text: str) -> dict:
         text_lower = text.lower()
