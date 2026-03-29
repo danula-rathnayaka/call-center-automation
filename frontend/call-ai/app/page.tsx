@@ -24,7 +24,6 @@ export default function Home() {
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
 
   const recognitionRef = useRef<any>(null);
-  const { notify } = useNotification();
 
   // Audio analysis refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -64,16 +63,6 @@ export default function Home() {
     const data = await res.json();
 
     console.log(data);
-
-    if (data.escalate) {
-      if (data.escalate) {
-        notify({
-          title: "Escalated Call",
-          message: "A call requires admin attention",
-        });
-      }
-    }
-
     speak(data.response);
   };
 

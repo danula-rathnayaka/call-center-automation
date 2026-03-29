@@ -18,6 +18,8 @@ export function AdminRealtimeListener() {
       notify({
         title: "Escalation Alert",
         message: data.message,
+        type: "warning",
+        duration: 10,
       });
     });
 
