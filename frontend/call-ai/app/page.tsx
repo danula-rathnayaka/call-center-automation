@@ -6,6 +6,7 @@ import HangOnButton from "./components/HangOnButton";
 import { Fragment } from "react";
 import { Transition } from "@headlessui/react";
 import PhoneNumberDialog from "./components/PhoneNumberDialog";
+import { useNotification } from "./components/notifications/NotificationProvider";
 
 declare global {
   interface Window {
@@ -23,6 +24,7 @@ export default function Home() {
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
 
   const recognitionRef = useRef<any>(null);
+  const { notify } = useNotification();
 
   // Audio analysis refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -51,7 +53,7 @@ export default function Home() {
   };
 
   const sendToBackend = async (text: string) => {
-    const res = await fetch("http://127.0.0.1:8000/api/chat", {
+    const res = await fetch("/api/agent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -62,6 +64,16 @@ export default function Home() {
     const data = await res.json();
 
     console.log(data);
+
+    if (data.escalate) {
+      if (data.escalate) {
+        notify({
+          title: "Escalated Call",
+          message: "A call requires admin attention",
+        });
+      }
+    }
+
     speak(data.response);
   };
 
