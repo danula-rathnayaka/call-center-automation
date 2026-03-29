@@ -19,6 +19,7 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false);
   const [isActiveCall, setActiveCall] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [agentTranscript, setAgentTranscript] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
   const [isNumberDialogOpen, setNumberDialogOpen] = useState(false);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
@@ -63,6 +64,7 @@ export default function Home() {
     const data = await res.json();
 
     console.log(data);
+    setAgentTranscript(data.response);
     speak(data.response);
   };
 
@@ -272,6 +274,11 @@ export default function Home() {
                 onMicClick={handleMicClick}
               />
               <div className="flex flex-col items-center gap-2">
+                {agentTranscript && (
+                  <div className="mt-10 max-w-xl bg-[#000C22]/10 backdrop-blur-md p-6 rounded-xl shadow-md mb-4">
+                    <p className="text-gray-800">{agentTranscript}</p>
+                  </div>
+                )}
                 <HangOnButton onHangOn={handleHangOn} />
                 <p className="text-sm text-gray-500">Session Id: 12DWD4W</p>
               </div>
@@ -281,10 +288,10 @@ export default function Home() {
 
         {/* Transcript */}
         {/* {transcript && (
-        <div className="mt-10 max-w-xl bg-white/70 backdrop-blur-md p-6 rounded-xl shadow-md">
-          <p className="text-gray-800">{transcript}</p>
-        </div>
-      )} */}
+          <div className="mt-10 max-w-xl bg-white/70 backdrop-blur-md p-6 rounded-xl shadow-md">
+            <p className="text-gray-800">{transcript}</p>
+          </div>
+        )} */}
 
         {/* Footer */}
         <footer className="pb-6 text-sm text-gray-700">
