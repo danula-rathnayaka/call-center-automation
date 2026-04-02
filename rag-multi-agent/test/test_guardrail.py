@@ -1,7 +1,10 @@
 import csv
 
 import pytest
+from dotenv import load_dotenv
 from sklearn.metrics import classification_report, confusion_matrix
+
+load_dotenv()
 
 from multiagent_rag.agents.guardrail import Guardrail
 
@@ -17,7 +20,9 @@ def report_metrics():
 
 
 def load_data():
-    with open("data/Guardrail_Eval_Dataset.csv", "r", encoding="utf-8") as f:
+    import os
+    dataset_path = os.path.join(os.path.dirname(__file__), "data", "Guardrail_Eval_Dataset.csv")
+    with open(dataset_path, "r", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
@@ -28,8 +33,12 @@ def guardrail():
 
 @pytest.mark.parametrize("row", load_data())
 def test_guardrail(guardrail, row):
+    import time
+    time.sleep(1.5)
+
     input_text = row["input_text"]
     expected_safe = row["expected_safe"].strip().upper() == "TRUE"
+    expected_reason = row["expected_reason"]
     expected_sanitized = row["expected_sanitized_text"]
 
     val_result = guardrail.validate(input_text)
@@ -38,6 +47,9 @@ def test_guardrail(guardrail, row):
     tracker["y_pred"].append("Safe" if val_result["safe"] else "Unsafe")
 
     assert val_result["safe"] == expected_safe
+
+    if not expected_safe:
+        assert val_result["reason"] == expected_reason
 
     sanitized_result = guardrail.sanitize_response(input_text)
     assert sanitized_result == expected_sanitized
