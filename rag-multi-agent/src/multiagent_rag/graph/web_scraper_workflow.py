@@ -30,18 +30,14 @@ _BLOCKED_PATH_PATTERNS = re.compile(r"/(login|logout|signin|signup|sign-in|sign-
 _BLOCKED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp", ".ico", ".zip", ".exe", ".mp4", ".mp3", ".css",
     ".js", }
 
+import os
+
+_prompts_dir = os.path.join(os.path.dirname(__file__), "..", "..", "prompts")
+with open(os.path.join(_prompts_dir, "scraper_classifier_prompt.txt"), "r", encoding="utf-8") as f:
+    _classifier_system_prompt = f.read()
+
 _CLASSIFIER_PROMPT = ChatPromptTemplate.from_messages(
-    [("system", "You are a content relevance classifier for a telecom company's customer support AI. "
-                "Decide if a webpage contains information useful for answering customer questions about "
-                "telecom products, services, plans, troubleshooting, billing, devices, or network coverage.\n\n"
-                "Respond ONLY in this exact format — two lines, nothing else:\n"
-                "SCORE: <integer 1-5>\n"
-                "REASON: <one sentence>\n\n"
-                "5 — Directly useful: FAQs, plan details, troubleshooting, pricing, coverage info\n"
-                "4 — Useful: product descriptions, service terms, device specs, contact info\n"
-                "3 — Marginal: general company info, press releases, blog posts\n"
-                "2 — Unlikely useful: partner pages, events, generic marketing\n"
-                "1 — Not useful: error pages, empty pages, unrelated content"),
+    [("system", _classifier_system_prompt),
         ("human", "URL: {url}\nTitle: {title}\n\nContent preview:\n{preview}"), ])
 
 _llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
@@ -125,7 +121,9 @@ async def _crawl_site(seed_url: str, domain: str, robots: RobotFileParser) -> Li
                     continue
 
                 title = result.metadata.get("title", "") if result.metadata else ""
-                text = result.markdown.fit_markdown if result.markdown else ""
+                text = ""
+                if result.markdown:
+                    text = getattr(result.markdown, "fit_markdown", "") or getattr(result.markdown, "raw_markdown", "") or str(result.markdown)
                 text = re.sub(r"\s{2,}", " ", text).strip()
 
                 links = []
