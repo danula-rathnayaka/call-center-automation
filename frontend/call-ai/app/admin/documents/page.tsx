@@ -1,14 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useNotification } from "@/app/components/notifications/NotificationProvider";
 
 type DocumentItem = {
   id: string;
   name: string;
   size: number;
-  uploadedAt: string;
+  type: string;
 };
 
 type UploadingItem = {
@@ -22,22 +22,44 @@ export default function DocumentsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { notify } = useNotification();
 
-  const [documents, setDocuments] = useState<DocumentItem[]>([
-    {
-      id: "1",
-      name: "Customer_Policy_Guide.pdf",
-      size: 245760,
-      uploadedAt: "2026-02-20 10:15 AM",
-    },
-    {
-      id: "2",
-      name: "Call_Script_Template.docx",
-      size: 102400,
-      uploadedAt: "2026-02-18 02:40 PM",
-    },
-  ]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
 
   const [uploadingItems, setUploadingItems] = useState<UploadingItem[]>([]);
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost:8000/api/knowledge/documents",
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch documents");
+        }
+
+        const data = await res.json();
+
+        const formatted: DocumentItem[] = data.documents.map(
+          (doc: any, index: number) => ({
+            id: `${index}-${doc.document_hash || doc.source}`,
+            name: doc.source,
+            size: 0,
+            type: doc.type,
+          }),
+        );
+
+        setDocuments(formatted);
+      } catch (err) {
+        notify({
+          title: "Error",
+          message: "Failed to load documents from server.",
+          type: "error",
+        });
+      }
+    };
+
+    fetchDocuments();
+  }, []);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -78,7 +100,7 @@ export default function DocumentsPage() {
             id: tempId,
             name: file.name,
             size: file.size,
-            uploadedAt: new Date().toLocaleString(),
+            type: file.type,
           },
           ...prev,
         ]);
@@ -100,7 +122,22 @@ export default function DocumentsPage() {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string, source: string) => {
+    const res = await fetch(
+      `http://localhost:8000/api/knowledge/documents/${source}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      notify({
+        title: "Deletation Failed",
+        message: err.detail || `Could not delete "${source}".`,
+        type: "error",
+      });
+      return;
+    }
     const doc = documents.find((d) => d.id === id);
     setDocuments((prev) => prev.filter((doc) => doc.id !== id));
     notify({
@@ -170,7 +207,7 @@ export default function DocumentsPage() {
                 <tr>
                   <th className="text-left px-6 py-4">File Name</th>
                   <th className="text-left px-6 py-4">Size</th>
-                  <th className="text-left px-6 py-4">Uploaded</th>
+                  <th className="text-left px-6 py-4">Type</th>
                   <th className="text-left px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
@@ -224,12 +261,10 @@ export default function DocumentsPage() {
                     <td className="px-6 py-4 text-neutral-600">
                       {(doc.size / 1024).toFixed(1)} KB
                     </td>
-                    <td className="px-6 py-4 text-neutral-600">
-                      {doc.uploadedAt}
-                    </td>
+                    <td className="px-6 py-4 text-neutral-600">{doc.type}</td>
                     <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => handleDelete(doc.id)}
+                        onClick={() => handleDelete(doc.id, doc.name)}
                         className="text-red-600 hover:underline"
                       >
                         Delete

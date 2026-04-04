@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNotification } from "@/app/components/notifications/NotificationProvider";
 
 type UrlItem = {
@@ -22,24 +22,43 @@ export default function UrlPage() {
   const router = useRouter();
   const { notify } = useNotification();
 
-  const [urls, setUrls] = useState<UrlItem[]>([
-    {
-      id: "1",
-      name: "Company Website",
-      url: "https://www.group11.com",
-      saved: true,
-      editing: false,
-    },
-    {
-      id: "2",
-      name: "Hotel Info Page",
-      url: "https://www.group11.com/hotels",
-      saved: true,
-      editing: false,
-    },
-  ]);
+  const [urls, setUrls] = useState<UrlItem[]>([]);
 
   const [ingestingItems, setIngestingItems] = useState<IngestingItem[]>([]);
+
+  useEffect(() => {
+    const fetchUrls = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/knowledge/urls");
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch URLs");
+        }
+
+        const data = await res.json();
+
+        const formatted: UrlItem[] = data.urls.map(
+          (item: any, index: number) => ({
+            id: `${index}-${item.document_hash || item.source}`,
+            name: item.source || "Unnamed",
+            url: item.source,
+            saved: true,
+            editing: false,
+          }),
+        );
+
+        setUrls(formatted);
+      } catch (err) {
+        notify({
+          title: "Error",
+          message: "Failed to load URLs from server.",
+          type: "error",
+        });
+      }
+    };
+
+    fetchUrls();
+  }, []);
 
   const handleAdd = () => {
     setUrls((prev) => [
@@ -54,7 +73,22 @@ export default function UrlPage() {
     ]);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string, source: string) => {
+    const res = await fetch(
+      `http://localhost:8000/api/knowledge/urls?source=${source}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      notify({
+        title: "Deletation Failed",
+        message: err.detail || `Could not delete "${source}".`,
+        type: "error",
+      });
+      return;
+    }
     const item = urls.find((u) => u.id === id);
     setUrls((prev) => prev.filter((u) => u.id !== id));
     notify({
@@ -288,7 +322,7 @@ export default function UrlPage() {
                               Edit
                             </button>
                             <button
-                              onClick={() => handleDelete(item.id)}
+                              onClick={() => handleDelete(item.id, item.url)}
                               className="text-red-600 hover:underline"
                             >
                               Delete
@@ -322,7 +356,7 @@ export default function UrlPage() {
                               Save
                             </button>
                             <button
-                              onClick={() => handleDelete(item.id)}
+                              onClick={() => handleDelete(item.id, item.url)}
                               className="text-red-600 hover:underline"
                             >
                               Delete

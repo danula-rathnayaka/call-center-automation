@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useState, Fragment } from "react";
 import { useNotification } from "@/app/components/notifications/NotificationProvider";
@@ -28,35 +29,51 @@ type IngestingItem = {
   apiUrl: string;
 };
 
-export default function ApisPage() {
+export default function ToolsPage() {
   const router = useRouter();
   const { notify } = useNotification();
 
-  const [apis, setApis] = useState<ApiItem[]>([
-    {
-      id: "1",
-      toolName: "Customer Data API",
-      description: "Fetches customer data",
-      apiUrl: "https://api.group11.com/customer",
-      httpMethod: "GET",
-      parameters: [],
-      saved: true,
-      editing: false,
-    },
-    {
-      id: "2",
-      toolName: "Hotel Data API",
-      description: "Fetches hotel information",
-      apiUrl: "https://api.group11.com/hotel",
-      httpMethod: "POST",
-      parameters: [],
-      saved: true,
-      editing: false,
-    },
-  ]);
+  const [apis, setApis] = useState<ApiItem[]>([]);
 
   const [ingestingItems, setIngestingItems] = useState<IngestingItem[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchApis = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/tools");
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch Tools");
+        }
+
+        const data = await res.json();
+
+        const formatted: ApiItem[] = data.tools.map(
+          (tool: any, index: number) => ({
+            id: `${index}-${tool.tool_name}`, // unique id
+            toolName: tool.tool_name,
+            description: tool.description,
+            apiUrl: tool.api_url,
+            httpMethod: tool.http_method,
+            parameters: [], // backend doesn’t return params yet
+            saved: true,
+            editing: false,
+          }),
+        );
+
+        setApis(formatted);
+      } catch (err) {
+        notify({
+          title: "Error",
+          message: "Failed to load Tools from server.",
+          type: "error",
+        });
+      }
+    };
+
+    fetchApis();
+  }, []);
 
   const handleAdd = () => {
     setApis((prev) => [
@@ -74,12 +91,24 @@ export default function ApisPage() {
     ]);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string, toolName: string) => {
+    const res = await fetch(`http://localhost:8000/tools/${toolName}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      notify({
+        title: "Deletation Failed",
+        message: err.detail || `Could not delete "${toolName}".`,
+        type: "error",
+      });
+      return;
+    }
     const api = apis.find((a) => a.id === id);
     setApis((prev) => prev.filter((a) => a.id !== id));
     notify({
-      title: "API Removed",
-      message: `"${api?.toolName || "API"}" has been deleted.`,
+      title: "Tool Removed",
+      message: `"${api?.toolName || "Tool"}" has been deleted.`,
       type: "info",
     });
   };
@@ -180,7 +209,7 @@ export default function ApisPage() {
     ) {
       notify({
         title: "Invalid URL",
-        message: "API URL must start with http:// or https://",
+        message: "Tool URL must start with http:// or https://",
         type: "error",
       });
       return;
@@ -226,7 +255,7 @@ export default function ApisPage() {
 
       setApis((prev) => [...prev, { ...api, saved: true, editing: false }]);
       notify({
-        title: isEdit ? "API Updated" : "API Registered",
+        title: isEdit ? "Tools Updated" : "Tools Registered",
         message: `"${api.toolName}" was successfully ${isEdit ? "updated" : "registered"}.`,
         type: "success",
       });
@@ -268,7 +297,7 @@ export default function ApisPage() {
               </svg>
             </button>
             <div>
-              <h1 className="text-2xl font-bold">API Management</h1>
+              <h1 className="text-2xl font-bold">Tools Management</h1>
               <p className="text-sm text-neutral-500">
                 Register and manage API tools for the automation system.
               </p>
@@ -279,7 +308,7 @@ export default function ApisPage() {
             onClick={handleAdd}
             className="px-4 py-2 bg-black text-white rounded-lg hover:bg-neutral-800"
           >
-            + Add API
+            + Add Tool
           </button>
         </div>
 
@@ -287,7 +316,7 @@ export default function ApisPage() {
         <div className="mt-10 bg-white rounded-xl border border-neutral-200 overflow-hidden">
           {apis.length === 0 && ingestingItems.length === 0 ? (
             <div className="p-12 text-center text-neutral-500">
-              No APIs registered.
+              No Tools registered.
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -452,7 +481,9 @@ export default function ApisPage() {
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDelete(api.id)}
+                                onClick={() =>
+                                  handleDelete(api.id, api.toolName)
+                                }
                                 className="text-red-600 hover:underline"
                               >
                                 Delete
@@ -486,7 +517,9 @@ export default function ApisPage() {
                                 Save
                               </button>
                               <button
-                                onClick={() => handleDelete(api.id)}
+                                onClick={() =>
+                                  handleDelete(api.id, api.toolName)
+                                }
                                 className="text-red-600 hover:underline"
                               >
                                 Delete

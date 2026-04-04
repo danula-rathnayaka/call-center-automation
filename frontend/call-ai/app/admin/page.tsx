@@ -47,7 +47,7 @@ export default function AdminPage() {
               href="/admin/documents"
             />
             <ActionCard title="Url" iconType="url" href="/admin/url" />
-            <ActionCard title="Apis" iconType="api" href="/admin/apis" />
+            <ActionCard title="Tools" iconType="api" href="/admin/tools" />
           </div>
         </div>
 
