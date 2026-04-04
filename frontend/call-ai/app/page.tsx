@@ -6,7 +6,6 @@ import HangOnButton from "./components/HangOnButton";
 import { Fragment } from "react";
 import { Transition } from "@headlessui/react";
 import PhoneNumberDialog from "./components/PhoneNumberDialog";
-import { useNotification } from "./components/notifications/NotificationProvider";
 
 declare global {
   interface Window {
@@ -25,45 +24,76 @@ export default function Home() {
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
 
-  const recognitionRef = useRef<any>(null);
-
   // Audio analysis refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // MediaRecorder refs for voice capture
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
   const speak = (text: string) => {
     const utterance = new SpeechSynthesisUtterance(text);
-
     utterance.lang = "en-US";
     utterance.rate = 1;
     utterance.pitch = 1;
-
-    utterance.onstart = () => {
-      setIsAgentSpeaking(true);
-    };
-
-    utterance.onend = () => {
-      setIsAgentSpeaking(false);
-    };
-
+    utterance.onstart = () => setIsAgentSpeaking(true);
+    utterance.onend = () => setIsAgentSpeaking(false);
     speechSynthesis.speak(utterance);
   };
 
-  const sendToBackend = async (text: string) => {
-    const res = await fetch("http://127.0.0.1:8000/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+  const encodeWAV = (samples: Float32Array, sampleRate: number): Blob => {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++)
+        view.setUint8(offset + i, str.charCodeAt(i));
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true); // PCM chunk size
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, 1, true); // mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true); // byte rate
+    view.setUint16(32, 2, true); // block align
+    view.setUint16(34, 16, true); // bits per sample
+    writeString(36, "data");
+    view.setUint32(40, samples.length * 2, true);
+
+    // Convert float32 → int16
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      offset += 2;
+    }
+
+    return new Blob([buffer], { type: "audio/wav" });
+  };
+
+  // now accepts a Blob and sends as multipart/form-data
+  const sendToBackend = async (audioBlob: Blob) => {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "recording.wav");
+    formData.append("session_id", "123123");
+
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/chat/voice?session_id=${sessionId}`,
+      {
+        method: "POST",
+        body: formData,
       },
-      body: JSON.stringify({ query: text, session_id: "123123" }),
-    });
+    );
 
     const data = await res.json();
-
     console.log(data);
     setAgentTranscript(data.response);
     speak(data.response);
@@ -87,109 +117,96 @@ export default function Home() {
         audioContextRef.current.close();
       } catch (e) {}
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-    }
     setAudioLevel(0);
   };
 
-  const startAudioAnalysis = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const audioContext = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
-      audioContextRef.current = audioContext;
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      analyserRef.current = analyser;
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      sourceRef.current = source;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      dataArrayRef.current = dataArray;
-
-      const updateAudioLevel = () => {
-        if (!analyserRef.current || !dataArrayRef.current) return;
-        analyserRef.current.getByteFrequencyData(dataArrayRef.current as any);
-        let sum = 0;
-        for (let i = 0; i < dataArrayRef.current.length; i++) {
-          sum += dataArrayRef.current[i];
-        }
-        const average = sum / dataArrayRef.current.length;
-        setAudioLevel(average);
-        animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
-      };
-
-      updateAudioLevel();
-    } catch (err) {
-      console.error("Error accessing microphone for volume analysis", err);
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert("Speech Recognition not supported in this browser");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        }
-      }
-
-      if (finalTranscript) {
-        setTranscript(finalTranscript);
-        sendToBackend(finalTranscript); // send to backend
-      }
-    };
-    recognition.onend = () => {
-      setIsListening(false);
-      stopAudioAnalysis();
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-      }
-      stopAudioAnalysis();
-    };
-  }, []);
-
-  const handleMicClick = () => {
-    if (!recognitionRef.current) return;
-
+  // mic click starts/stops MediaRecorder
+  const handleMicClick = async () => {
     if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      // Stop recording
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop(); // triggers onstop → encodes real WAV
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
       stopAudioAnalysis();
+      setIsListening(false);
     } else {
-      setTranscript("");
-      recognitionRef.current.start();
-      setIsListening(true);
-      startAudioAnalysis();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        streamRef.current = stream;
+
+        // Set up AudioContext for both analysis and raw PCM capture
+        const audioContext = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )();
+        audioContextRef.current = audioContext;
+
+        const source = audioContext.createMediaStreamSource(stream);
+        sourceRef.current = source;
+
+        // Analyser for audio level visualisation
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyserRef.current = analyser;
+        source.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(
+          bufferLength,
+        ) as Uint8Array<ArrayBuffer>;
+        dataArrayRef.current = dataArray;
+
+        const updateAudioLevel = () => {
+          if (!analyserRef.current || !dataArrayRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+          let sum = 0;
+          for (let i = 0; i < dataArrayRef.current.length; i++)
+            sum += dataArrayRef.current[i];
+          setAudioLevel(sum / dataArrayRef.current.length);
+          animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
+        };
+        updateAudioLevel();
+
+        // ScriptProcessor to collect raw PCM samples
+        const sampleRate = audioContext.sampleRate;
+        const bufferSize = 4096;
+        const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+        const pcmChunks: Float32Array[] = [];
+
+        processor.onaudioprocess = (e) => {
+          const channelData = e.inputBuffer.getChannelData(0);
+          pcmChunks.push(new Float32Array(channelData));
+        };
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        // Store a "fake" stop handler on mediaRecorderRef
+        (mediaRecorderRef.current as any) = {
+          stop: () => {
+            processor.disconnect();
+            source.disconnect(processor);
+
+            // Merge all PCM chunks
+            const totalLength = pcmChunks.reduce((acc, c) => acc + c.length, 0);
+            const merged = new Float32Array(totalLength);
+            let offset = 0;
+            for (const chunk of pcmChunks) {
+              merged.set(chunk, offset);
+              offset += chunk.length;
+            }
+
+            const wavBlob = encodeWAV(merged, sampleRate);
+            sendToBackend(wavBlob);
+          },
+        };
+
+        setIsListening(true);
+      } catch (err) {
+        console.error("Microphone access error:", err);
+      }
     }
   };
 
@@ -207,9 +224,7 @@ export default function Home() {
       `http://127.0.0.1:8000/api/session/end/${sessionId}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       },
     );
     const resData = await res.json();
@@ -228,9 +243,7 @@ export default function Home() {
         `http://127.0.0.1:8000/api/session/start?session_id=${num}`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone_number: phone }),
         },
       );
@@ -247,17 +260,14 @@ export default function Home() {
   return (
     <>
       <main className="flex min-h-screen flex-col justify-between bg-gradient-to-b from-[#B0EBFF] to-white text-center px-4">
-        {/* Title */}
         <div className="pt-20">
           <h1 className="text-3xl font-bold text-black">Call Center Agent</h1>
-
           <p className="mt-3 text-xl text-gray-800">
             How can I help you today ?
           </p>
         </div>
 
         <div className="flex items-center justify-center relative">
-          {/* Start Call Button */}
           <Transition
             as={Fragment}
             show={!isActiveCall}
@@ -287,7 +297,6 @@ export default function Home() {
             </div>
           </Transition>
 
-          {/* Active Call UI */}
           <Transition
             as={Fragment}
             show={isActiveCall}
@@ -318,14 +327,6 @@ export default function Home() {
           </Transition>
         </div>
 
-        {/* Transcript */}
-        {/* {transcript && (
-          <div className="mt-10 max-w-xl bg-white/70 backdrop-blur-md p-6 rounded-xl shadow-md">
-            <p className="text-gray-800">{transcript}</p>
-          </div>
-        )} */}
-
-        {/* Footer */}
         <footer className="pb-6 text-sm text-gray-700">
           Powered by Call Center Automation Solution by Group 11
         </footer>
