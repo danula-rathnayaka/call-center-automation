@@ -23,6 +23,7 @@ export default function Home() {
   const [audioLevel, setAudioLevel] = useState(0);
   const [isNumberDialogOpen, setNumberDialogOpen] = useState(false);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
 
   const recognitionRef = useRef<any>(null);
 
@@ -53,7 +54,7 @@ export default function Home() {
   };
 
   const sendToBackend = async (text: string) => {
-    const res = await fetch("/api/agent", {
+    const res = await fetch("http://127.0.0.1:8000/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -201,14 +202,45 @@ export default function Home() {
     setActiveCall(true);
   };
 
-  const handleHangOn = (data: boolean) => {
-    setActiveCall(data);
+  const handleHangOn = async (data: boolean) => {
+    const res = await fetch(
+      `http://127.0.0.1:8000/api/session/end/${sessionId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    const resData = await res.json();
+
+    if (resData.session_id == sessionId) {
+      setSessionId("");
+      setActiveCall(data);
+      sessionStorage.removeItem("phone_no");
+    }
   };
 
-  const handlePhoneSubmit = (phone: string) => {
+  const handlePhoneSubmit = async (phone: string) => {
     if (phone.length === 10) {
-      sessionStorage.setItem("phone_no", phone);
-      handleActiveCall();
+      const num: number = Math.floor(100000 + Math.random() * 900000);
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/session/start?session_id=${num}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ phone_number: phone }),
+        },
+      );
+      const data = await res.json();
+
+      if (data.session_id == num) {
+        setSessionId(data.session_id);
+        sessionStorage.setItem("phone_no", phone);
+        handleActiveCall();
+      }
     }
   };
 
@@ -280,7 +312,7 @@ export default function Home() {
                   </div>
                 )}
                 <HangOnButton onHangOn={handleHangOn} />
-                <p className="text-sm text-gray-500">Session Id: 12DWD4W</p>
+                <p className="text-sm text-gray-500">Session Id: {sessionId}</p>
               </div>
             </div>
           </Transition>

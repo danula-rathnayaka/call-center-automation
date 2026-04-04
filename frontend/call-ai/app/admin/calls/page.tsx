@@ -42,9 +42,9 @@ export default function AdminCalls() {
               <button
                 onClick={() =>
                   notify({
-                    title: "Upload Completed",
-                    message: "Your document has been uploaded successfully!",
-                    type: "error",
+                    title: "Escalation Alert",
+                    message: "A call needs admin attention",
+                    type: "info",
                   })
                 }
                 className="w-10 h-10 bg-green-700 flex items-center justify-center rounded-full cursor-pointer"
