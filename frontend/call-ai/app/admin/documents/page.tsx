@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { useNotification } from "@/app/components/notifications/NotificationProvider";
 
 type DocumentItem = {
   id: string;
@@ -19,6 +20,7 @@ type UploadingItem = {
 export default function DocumentsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { notify } = useNotification();
 
   const [documents, setDocuments] = useState<DocumentItem[]>([
     {
@@ -63,7 +65,11 @@ export default function DocumentsPage() {
 
         if (!res.ok) {
           const err = await res.json();
-          alert(`Failed to upload "${file.name}": ${err.detail}`);
+          notify({
+            title: "Upload Failed",
+            message: err.detail || `Could not upload "${file.name}".`,
+            type: "error",
+          });
           return;
         }
 
@@ -76,17 +82,32 @@ export default function DocumentsPage() {
           },
           ...prev,
         ]);
+
+        notify({
+          title: "Document Uploaded",
+          message: `"${file.name}" was successfully ingested.`,
+          type: "success",
+        });
       } catch (e) {
-        alert(`Network error uploading "${file.name}"`);
+        notify({
+          title: "Network Error",
+          message: `Could not reach the server while uploading "${file.name}".`,
+          type: "error",
+        });
       } finally {
-        // Remove from uploading list regardless of outcome
         setUploadingItems((prev) => prev.filter((u) => u.id !== tempId));
       }
     });
   };
 
   const handleDelete = (id: string) => {
+    const doc = documents.find((d) => d.id === id);
     setDocuments((prev) => prev.filter((doc) => doc.id !== id));
+    notify({
+      title: "Document Removed",
+      message: `"${doc?.name || "Document"}" has been deleted.`,
+      type: "info",
+    });
   };
 
   return (
@@ -161,7 +182,6 @@ export default function DocumentsPage() {
                     className="border-t border-neutral-200 bg-blue-50"
                   >
                     <td className="px-6 py-4 font-medium flex items-center gap-3">
-                      {/* Spinner */}
                       <svg
                         className="animate-spin h-4 w-4 text-blue-500 shrink-0"
                         xmlns="http://www.w3.org/2000/svg"
