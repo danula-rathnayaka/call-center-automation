@@ -8,6 +8,7 @@ from langchain_groq import ChatGroq
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from multiagent_rag.utils.logger import get_logger
+from multiagent_rag.utils.prompt_manager import get_prompt_template
 
 logger = get_logger(__name__)
 
@@ -15,39 +16,28 @@ logger = get_logger(__name__)
 class Contextualizer:
     def __init__(self):
         self.llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
-
-        _prompts_dir = os.path.join(os.path.dirname(__file__), "..", "..", "prompts")
-        with open(os.path.join(_prompts_dir, "contextualizer_prompt.txt"), "r", encoding="utf-8") as f:
-            template_text = f.read()
-
-        from multiagent_rag.utils.telemetry import get_langfuse_client
-        client = get_langfuse_client()
-        if client:
-            try:
-                lf_prompt = client.get_prompt("contextualizer_prompt", type="text", fallback=template_text)
-                template_text = lf_prompt.get_langchain_prompt()
-            except Exception as e:
-                logger.warning(f"Could not load contextualizer_prompt from Langfuse: {e}")
-
-        self.prompt = ChatPromptTemplate.from_messages(
-            [("system", template_text), ("placeholder", "{chat_history}"), ("human", "{input}"), ])
+        template_text = get_prompt_template("contextualizer_prompt", "contextualizer_prompt.txt")
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", template_text),
+            ("placeholder", "{chat_history}"),
+            ("human", "{input}"),
+        ])
         self.chain = self.prompt | self.llm | StrOutputParser()
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8),
-        retry=retry_if_exception_type(Exception), reraise=False, )
+        retry=retry_if_exception_type(Exception), reraise=False)
     def _invoke_with_retry(self, payload: dict) -> str:
         return self.chain.invoke(payload)
 
     from langfuse import observe
     @observe(as_type="generation")
-    def reformulate(self, query: str, history: List[BaseMessage], summary: Optional[str] = None, ) -> str:
+    def reformulate(self, query: str, history: List[BaseMessage], summary: Optional[str] = None) -> str:
         if not history and not summary:
             return query
 
         augmented_history = list(history)
         if summary:
-            augmented_history = [SystemMessage(
-                content=f"Summary of earlier conversation:\n{summary}")] + augmented_history
+            augmented_history = [SystemMessage(content=f"Summary of earlier conversation:\n{summary}")] + augmented_history
 
         try:
             new_query = self._invoke_with_retry({"chat_history": augmented_history, "input": query})

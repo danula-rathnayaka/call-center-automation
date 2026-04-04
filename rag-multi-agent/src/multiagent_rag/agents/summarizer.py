@@ -6,31 +6,20 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
 
 from multiagent_rag.utils.logger import get_logger
+from multiagent_rag.utils.prompt_manager import get_prompt_template
 
 logger = get_logger(__name__)
-
-SUMMARIZER_TEMPLATE = (
-    "You are a conversation summarizer for a telecom customer support system. "
-    "Condense the following conversation history into a brief summary that preserves "
-    "key context: customer issues, solutions provided, account details mentioned, "
-    "and any unresolved matters. Keep it under 150 words."
-)
 
 
 class ConversationSummarizer:
 
     def __init__(self):
-        self.llm = ChatGroq(
-            model="llama-3.1-8b-instant",
-            temperature=0,
-            max_tokens=256,
-        )
-
+        self.llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0, max_tokens=256)
+        template_text = get_prompt_template("summarizer_prompt", "summarizer_prompt.txt")
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", SUMMARIZER_TEMPLATE),
+            ("system", template_text),
             ("human", "Conversation to summarize:\n{conversation}"),
         ])
-
         self.chain = self.prompt | self.llm | StrOutputParser()
 
     from langfuse import observe
@@ -41,18 +30,6 @@ class ConversationSummarizer:
             keep_recent: int = 4,
             existing_summary: Optional[str] = None,
     ) -> Tuple[List[BaseMessage], str]:
-        """
-        Summarizes turns older than `keep_recent` into a plain string.
-
-        Returns:
-            recent_history  — the last `keep_recent` BaseMessage objects
-                              (to be stored back in state["chat_history"])
-            new_summary     — a plain string summary of ALL older context,
-                              folding in `existing_summary` if provided
-                              (to be stored in state["conversation_summary"])
-
-        If history is short enough, returns it unchanged with the existing summary.
-        """
         if len(history) <= keep_recent:
             return history, existing_summary or ""
 
@@ -76,11 +53,7 @@ class ConversationSummarizer:
                 )
 
             new_summary = self.chain.invoke({"conversation": conversation_text})
-
-            logger.info(
-                f"Summarized {len(older_messages)} older messages, "
-                f"keeping {len(recent_messages)} recent messages"
-            )
+            logger.info(f"Summarized {len(older_messages)} older messages, keeping {len(recent_messages)} recent")
             return recent_messages, new_summary
 
         except Exception as e:
