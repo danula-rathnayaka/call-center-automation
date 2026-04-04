@@ -6,7 +6,7 @@ export function ActionCard({
   href,
 }: {
   title: string;
-  iconType: "phone" | "doc" | "api";
+  iconType: "phone" | "doc" | "api" | "url";
   href: string;
 }) {
   return (
@@ -50,6 +50,19 @@ export function ActionCard({
           className="w-12 h-12"
         >
           <path d="m480-400-80-80 80-80 80 80-80 80Zm-85-235L295-735l185-185 185 185-100 100-85-85-85 85ZM225-295 40-480l185-185 100 100-85 85 85 85-100 100Zm510 0L635-395l85-85-85-85 100-100 185 185-185 185ZM480-40 295-225l100-100 85 85 85-85 100 100L480-40Z" />
+        </svg>
+      )}
+
+      {iconType === "url" && (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="24px"
+          viewBox="0 -960 960 960"
+          width="24px"
+          fill="#000000"
+          className="w-12 h-12"
+        >
+          <path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z" />
         </svg>
       )}
       <p className="font-medium">{title}</p>
