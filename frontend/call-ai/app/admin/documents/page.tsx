@@ -10,11 +10,16 @@ type DocumentItem = {
   uploadedAt: string;
 };
 
+type UploadingItem = {
+  id: string;
+  name: string;
+  size: number;
+};
+
 export default function DocumentsPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // existing documents
   const [documents, setDocuments] = useState<DocumentItem[]>([
     {
       id: "1",
@@ -30,6 +35,8 @@ export default function DocumentsPage() {
     },
   ]);
 
+  const [uploadingItems, setUploadingItems] = useState<UploadingItem[]>([]);
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -37,14 +44,45 @@ export default function DocumentsPage() {
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
 
-    const newDocs: DocumentItem[] = Array.from(files).map((file) => ({
-      id: crypto.randomUUID(),
-      name: file.name,
-      size: file.size,
-      uploadedAt: new Date().toLocaleString(),
-    }));
+    Array.from(files).forEach(async (file) => {
+      const tempId = crypto.randomUUID();
 
-    setDocuments((prev) => [...newDocs, ...prev]);
+      setUploadingItems((prev) => [
+        { id: tempId, name: file.name, size: file.size },
+        ...prev,
+      ]);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("http://127.0.0.1:8000/api/ingest/file", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert(`Failed to upload "${file.name}": ${err.detail}`);
+          return;
+        }
+
+        setDocuments((prev) => [
+          {
+            id: tempId,
+            name: file.name,
+            size: file.size,
+            uploadedAt: new Date().toLocaleString(),
+          },
+          ...prev,
+        ]);
+      } catch (e) {
+        alert(`Network error uploading "${file.name}"`);
+      } finally {
+        // Remove from uploading list regardless of outcome
+        setUploadingItems((prev) => prev.filter((u) => u.id !== tempId));
+      }
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -90,7 +128,6 @@ export default function DocumentsPage() {
           <p className="text-xs text-neutral-400 mt-2">
             PDF, DOCX, TXT, CSV supported
           </p>
-
           <input
             type="file"
             multiple
@@ -100,9 +137,9 @@ export default function DocumentsPage() {
           />
         </div>
 
-        {/* Existing Documents - Directly Below Upload */}
+        {/* Document Table */}
         <div className="mt-10 bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          {documents.length === 0 ? (
+          {documents.length === 0 && uploadingItems.length === 0 ? (
             <div className="p-12 text-center text-neutral-500">
               No documents available.
             </div>
@@ -117,6 +154,47 @@ export default function DocumentsPage() {
                 </tr>
               </thead>
               <tbody>
+                {/* Uploading rows with loader */}
+                {uploadingItems.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-t border-neutral-200 bg-blue-50"
+                  >
+                    <td className="px-6 py-4 font-medium flex items-center gap-3">
+                      {/* Spinner */}
+                      <svg
+                        className="animate-spin h-4 w-4 text-blue-500 shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                      </svg>
+                      <span className="text-blue-700">{item.name}</span>
+                    </td>
+                    <td className="px-6 py-4 text-neutral-500">
+                      {(item.size / 1024).toFixed(1)} KB
+                    </td>
+                    <td className="px-6 py-4 text-blue-500 italic">
+                      Processing...
+                    </td>
+                    <td className="px-6 py-4 text-right text-neutral-400">—</td>
+                  </tr>
+                ))}
+
+                {/* Completed document rows */}
                 {documents.map((doc) => (
                   <tr
                     key={doc.id}
