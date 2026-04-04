@@ -56,7 +56,7 @@ def session_manager_node(state: RAGState):
                 f"for session {session_id}")
 
     return {"chat_history": history, "conversation_summary": summary, "should_escalate": False,
-        "escalation_reason": None, }
+        "escalation_reason": None, "phone_number": state.get("phone_number")}
 
 
 def stt_node(state: RAGState):
@@ -343,24 +343,40 @@ def human_handoff_node(state: RAGState):
     query = state.get("query", "")
     reason = state.get("escalation_reason", "Low confidence score")
 
-    holding_message = ("I want to make sure you get the best help possible. "
-                       "I am connecting you with one of our specialists right now. "
-                       f"Your reference number is {session_id[:8].upper()}. "
-                       "Please hold for a moment.")
+    holding_message = (
+        "I want to make sure you get the best help possible. "
+        "I am connecting you with one of our specialists right now. "
+        "Please hold for a moment."
+    )
 
+    handoff_uuid = None
     try:
-        handoff_id = enqueue_handoff(session_id=session_id, query=query, final_answer=state.get("final_answer", ""),
-            emotion=state.get("emotion", "neutral"), emotion_confidence=state.get("emotion_confidence", 0.0),
-            response_confidence=state.get("response_confidence", 0.0), escalation_reason=reason,
-            intent=state.get("intent", "unknown"), chat_history=state.get("chat_history", []),
-            conversation_summary=state.get("conversation_summary"), latency_ms=state.get("latency_ms", {}), )
-        logger.info(f"Human handoff queued (id={handoff_id}) for session {session_id}")
+        handoff_uuid = enqueue_handoff(
+            session_id=session_id,
+            query=query,
+            final_answer=state.get("final_answer", ""),
+            emotion=state.get("emotion", "neutral"),
+            emotion_confidence=state.get("emotion_confidence", 0.0),
+            response_confidence=state.get("response_confidence", 0.0),
+            escalation_reason=reason,
+            intent=state.get("intent", "unknown"),
+            chat_history=state.get("chat_history", []),
+            conversation_summary=state.get("conversation_summary"),
+            latency_ms=state.get("latency_ms", {}),
+            phone_number=state.get("phone_number"),
+        )
+        logger.info(f"Human handoff queued (uuid={handoff_uuid}) for session {session_id}")
     except Exception as e:
         logger.error(f"Failed to enqueue handoff for session {session_id}: {e}")
 
     elapsed = round((time.time() - start) * 1000)
-    return {"final_answer": holding_message, "should_escalate": True, "escalation_reason": reason,
-        "latency_ms": {"human_handoff": elapsed}, }
+    return {
+        "final_answer": holding_message,
+        "should_escalate": True,
+        "escalation_reason": reason,
+        "latency_ms": {"human_handoff": elapsed},
+        "handoff_uuid": handoff_uuid,
+    }
 
 
 def route_after_confidence(state: RAGState) -> str:

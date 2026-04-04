@@ -20,6 +20,7 @@ class RAGState(TypedDict):
     query: str
     audio_path: str
     session_id: str
+    phone_number: Optional[str]
     emotion: str
     emotion_confidence: float
     reformulated_query: str
@@ -35,3 +36,4 @@ class RAGState(TypedDict):
     escalation_reason: Optional[str]
     latency_ms: Annotated[Dict[str, float], merge_dicts]
     status: str
+    handoff_uuid: Optional[str]

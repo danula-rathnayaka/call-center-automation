@@ -26,15 +26,13 @@ router = APIRouter(prefix="/api/handoff", tags=["Human Handoff"])
     response_model=HandoffQueueResponse,
     summary="Get active handoff queue (ringing + answered)",
     description=(
-        "Returns all calls currently requiring human agent attention, sorted oldest-first (true FIFO queue order). "
-        "Only `ringing` and `answered` calls appear here — ended calls are excluded. "
-        "The response includes per-status counts (`ringing`, `answered`, `total`) so the frontend "
-        "can render queue depth badges without iterating the items array. "
-        "**Poll this endpoint every 5–10 seconds** on the agent dashboard to keep the queue live."
+        "Returns all calls currently requiring human agent attention, sorted oldest-first. "
+        "Only ringing and answered calls appear here - ended calls are excluded. "
+        "The response includes per-status counts so the frontend can render queue depth badges. "
+        "Poll this endpoint every 5-10 seconds on the agent dashboard to keep the queue live."
     ),
 )
 async def get_handoff_queue():
-    """Active calls only (ringing + answered), sorted oldest first."""
     try:
         items = get_active_handoffs()
         ringing_count = sum(1 for i in items if i["status"] == "ringing")
@@ -55,15 +53,14 @@ async def get_handoff_queue():
     response_model=HandoffHistoryResponse,
     summary="Get all ended (completed) handoff calls",
     description=(
-        "Returns every call that has been ended via `POST /{id}/end`, sorted most-recently-ended first. "
-        "These calls no longer appear in `/queue`. "
-        "Use this to build a call log / history tab on the agent dashboard. "
-        "Each item includes `actioned_at` (when the call was ended) and `answered_at` (when it was picked up) "
+        "Returns every call that has been ended via POST /{id}/end, sorted most-recently-ended first. "
+        "These calls no longer appear in /queue. "
+        "Use this to build a call log tab on the agent dashboard. "
+        "Each item includes actioned_at (when the call was ended) and answered_at (when it was picked up) "
         "so you can compute handle time."
     ),
 )
 async def get_handoff_history():
-    """Ended calls only, most recently ended first."""
     try:
         items = get_ended_handoffs()
         return HandoffHistoryResponse(
@@ -78,19 +75,18 @@ async def get_handoff_history():
 @router.get(
     "/dashboard",
     response_model=HandoffDashboardResponse,
-    summary="Live status board — counts + full active call list",
+    summary="Live status board - counts and full active call list",
     description=(
         "Single endpoint for a call-center status board. Returns: "
-        "`ringing` — number of unanswered calls waiting; "
-        "`answered` — calls currently being handled by an agent; "
-        "`ended` — total historical call count; "
-        "`active_calls` — the full active queue list (same as `/queue`) for rendering individual call cards. "
-        "Use this as the primary data source for a wall-display or supervisor dashboard that needs "
+        "ringing - number of unanswered calls waiting; "
+        "answered - calls currently being handled by an agent; "
+        "ended - total historical call count; "
+        "active_calls - the full active queue list for rendering individual call cards. "
+        "Use this as the primary data source for a supervisor dashboard that needs "
         "both aggregate metrics and call detail in a single request."
     ),
 )
 async def get_handoff_dashboard():
-    """Aggregate counts by status + full active call list for a live status board."""
     try:
         stats = get_handoff_stats()
         active = get_active_handoffs()
@@ -110,16 +106,14 @@ async def get_handoff_dashboard():
     response_model=HandoffActionResponse,
     summary="Mark a call as answered (agent picked up)",
     description=(
-        "Transitions the call from `ringing` → `answered`. "
-        "Call this when an agent clicks \"Answer\" on a queue item. "
-        "The call remains visible in `/queue` but moves to the `answered` section so other agents "
-        "know it is being handled. Records `answered_at` timestamp for handle-time reporting. "
-        "Returns `409 Conflict` if the call is not in `ringing` state (already answered or ended)."
+        "Transitions the call from ringing to answered. "
+        "Call this when an agent clicks Answer on a queue item. "
+        "The call remains visible in /queue but moves to the answered section. "
+        "Records answered_at timestamp for handle-time reporting. "
+        "Returns 409 Conflict if the call is not in ringing state."
     ),
 )
-async def answer_handoff(handoff_id: int):
-    """Agent picks up the call — transitions ringing → answered.
-    Call will remain in the active queue but marked as answered."""
+async def answer_handoff(handoff_id: str):
     try:
         item = get_handoff_detail(handoff_id)
         if not item:
@@ -147,19 +141,16 @@ async def answer_handoff(handoff_id: int):
 @router.post(
     "/{handoff_id}/end",
     response_model=HandoffActionResponse,
-    summary="End a call — removes it from the active queue",
+    summary="End a call - removes it from the active queue",
     description=(
-        "Transitions the call from `ringing` or `answered` → `ended`. "
+        "Transitions the call from ringing or answered to ended. "
         "Call this when the agent completes the interaction and hangs up. "
-        "The call is immediately removed from `/queue` and will appear in `/history`. "
-        "Records `actioned_at` timestamp. "
-        "Returns `409 Conflict` if the call is already ended. "
-        "This is the only action that removes a call from the active queue."
+        "The call is immediately removed from /queue and will appear in /history. "
+        "Records actioned_at timestamp. "
+        "Returns 409 Conflict if the call is already ended."
     ),
 )
-async def end_handoff(handoff_id: int):
-    """End the call — transitions ringing/answered → ended.
-    Removes the entry from the active queue; it will appear in /history."""
+async def end_handoff(handoff_id: str):
     try:
         item = get_handoff_detail(handoff_id)
         if not item:
@@ -188,15 +179,13 @@ async def end_handoff(handoff_id: int):
     "/{handoff_id}",
     summary="Get full detail for a single handoff record",
     description=(
-        "Returns the complete record for any handoff by its integer ID — regardless of status. "
-        "Includes the full `chat_history` (all AI/customer message turns), `conversation_summary`, "
-        "`latency_ms` breakdown, emotion scores, confidence score, and escalation reason. "
-        "Use this to populate a side-panel or modal when an agent clicks on a queue item to "
-        "review the conversation context before speaking to the customer."
+        "Returns the complete record for any handoff by its UUID - regardless of status. "
+        "Includes the full chat_history, conversation_summary, latency_ms breakdown, "
+        "emotion scores, confidence score, escalation reason, and customer phone number. "
+        "Use this to populate a side-panel when an agent clicks on a queue item."
     ),
 )
-async def get_handoff_detail_endpoint(handoff_id: int):
-    """Full detail for any single handoff record including chat history."""
+async def get_handoff_detail_endpoint(handoff_id: str):
     try:
         item = get_handoff_detail(handoff_id)
         if not item:
@@ -207,4 +196,3 @@ async def get_handoff_detail_endpoint(handoff_id: int):
     except Exception as e:
         logger.error(f"Failed to fetch handoff {handoff_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-

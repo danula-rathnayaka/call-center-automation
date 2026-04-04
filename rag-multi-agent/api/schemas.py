@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1)
     session_id: Optional[str] = Field(None)
+    phone_number: Optional[str] = Field(None, description="Customer's phone number, captured at session start")
 
 
 class RetrievedChunk(BaseModel):
@@ -34,6 +35,11 @@ class ChatResponse(BaseModel):
     retrieved_chunks: List[RetrievedChunk] = Field(default_factory=list)
     confidence: ConfidenceResult = Field(default_factory=ConfidenceResult)
     latency_ms: dict = Field(default_factory=dict)
+    handoff_uuid: Optional[str] = Field(
+        None,
+        description="UUID of the enqueued handoff. Only present when confidence.should_escalate=true. "
+                    "Use this to track the call on the agent dashboard — do NOT display to the customer."
+    )
 
 
 class URLIngestionRequest(BaseModel):
@@ -107,8 +113,9 @@ class DeleteToolResponse(BaseModel):
 
 
 class HandoffQueueItem(BaseModel):
-    id: int
+    id: str
     session_id: str
+    phone_number: Optional[str] = None
     query: str
     emotion: str = "neutral"
     escalation_reason: str = ""
@@ -140,7 +147,7 @@ class HandoffDashboardResponse(BaseModel):
 
 class HandoffActionResponse(BaseModel):
     status: str
-    handoff_id: int
+    handoff_id: str
     session_id: str
     message: str
 
