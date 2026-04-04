@@ -1,0 +1,243 @@
+[
+  {
+    "filename": "LankaLink_Customer_Support_Manual.pdf",
+    "filepath": "..\\data\\LankaLink_Customer_Support_Manual.pdf",
+    "doc_id": "b0055b2e1081",
+    "total_pages": 3,
+    "empty_pages": 0,
+    "total_words": 440,
+    "total_chars": 2959,
+    "sentence_count": 42,
+    "vocab_size": 164,
+    "avg_sent_len": 10.476190476190476,
+    "extraction_status": "ok",
+    "full_text": "LankaLink Customer Support Manual\nComprehensive Guide for Call Centre Agents\n1. Introduction\nThis manual serves as a complete reference for LankaLink call centre agents supporting customers with SIM cards,\nWiFi and broadband, account and billing enquiries, and general troubleshooting. It is designed to help agents provide\naccurate, efficient, and consistent information to customers while maintaining excellent service quality. The manual\ncovers common questions, step-by-step guidance, and clear troubleshooting methods for resolving technical and\nservice-related issues.\n\n2. SIM Card Support\nThis section provides detailed instructions on SIM card activation, replacement, troubleshooting, and customer\nguidance. Agents must ensure customers are guided clearly and patiently through each process.\n2.1 SIM Activation Procedure\n1. Ask the customer to insert the LankaLink SIM card into their mobile device. 2. Ensure the device is powered on and\ncompatible with LankaLink’s network bands. 3. Advise the customer to wait for signal detection (up to 5 minutes). 4. If\nthe SIM does not activate automatically, guide them to manually select the network via Settings fi Mobile Networks fi\nNetwork Operators fi Select LankaLink. 5. Confirm successful activation by checking network bars and sending a test\nSMS or call.\nIssue Cause Customer Action\nNo signal detected SIM not properly inserted Ask customer to remove and reinsert SIM securely.\nInvalid SIM error Faulty or inactive SIM Verify SIM status in system and advise replacement if required.\nCannot make calls Unpaid bill or restricted account Direct customer to clear outstanding balance via LankaLink app or portal.\nSIM not recognised Device incompatibility Confirm if handset is unlocked and supports LankaLink’s frequencies.\n\n3. WiFi and Broadband Support\nCustomers may experience connectivity or speed issues with their LankaLink broadband. Agents must confirm\nwhether the issue relates to WiFi, the router, or the customer’s connected device before proceeding.\n3.1 Step-by-Step Connection Procedure\n1. Confirm the broadband service is active by checking the account status. 2. Ask the customer to check whether the\nrouter power light is ON. 3. Instruct them to verify the WiFi indicator is lit or blinking. 4. If no light appears, ask them to\nrestart the router. 5. On their device, open WiFi settings and select the LankaLink network name (SSID). 6. Enter the\nprovided WiFi password printed on the router or setup card. 7. Test connectivity by opening a browser and accessing\nwww.lankalink.lk.\nIssue Cause Customer Action\nSlow Internet Too many connected devices Advise to disconnect unused devices and restart router.\nNo WiFi Signal Router malfunction or power loss Confirm power connection and restart router.\nCannot Connect Incorrect password or SSID Ask customer to re-enter credentials correctly.\nDrops frequently Weak signal or interference Relocate router away from metal objects or microwaves.",
+    "pages": [
+      {
+        "page_number": 1,
+        "word_count": 75,
+        "char_count": 574,
+        "is_empty": false,
+        "raw_text": "LankaLink Customer Support Manual\nComprehensive Guide for Call Centre Agents\n1. Introduction\nThis manual serves as a complete reference for LankaLink call centre agents supporting customers with SIM cards,\nWiFi and broadband, account and billing enquiries, and general troubleshooting. It is designed to help agents provide\naccurate, efficient, and consistent information to customers while maintaining excellent service quality. The manual\ncovers common questions, step-by-step guidance, and clear troubleshooting methods for resolving technical and\nservice-related issues."
+      },
+      {
+        "page_number": 2,
+        "word_count": 184,
+        "char_count": 1203,
+        "is_empty": false,
+        "raw_text": "2. SIM Card Support\nThis section provides detailed instructions on SIM card activation, replacement, troubleshooting, and customer\nguidance. Agents must ensure customers are guided clearly and patiently through each process.\n2.1 SIM Activation Procedure\n1. Ask the customer to insert the LankaLink SIM card into their mobile device. 2. Ensure the device is powered on and\ncompatible with LankaLink’s network bands. 3. Advise the customer to wait for signal detection (up to 5 minutes). 4. If\nthe SIM does not activate automatically, guide them to manually select the network via Settings fi Mobile Networks fi\nNetwork Operators fi Select LankaLink. 5. Confirm successful activation by checking network bars and sending a test\nSMS or call.\nIssue Cause Customer Action\nNo signal detected SIM not properly inserted Ask customer to remove and reinsert SIM securely.\nInvalid SIM error Faulty or inactive SIM Verify SIM status in system and advise replacement if required.\nCannot make calls Unpaid bill or restricted account Direct customer to clear outstanding balance via LankaLink app or portal.\nSIM not recognised Device incompatibility Confirm if handset is unlocked and supports LankaLink’s frequencies."
+      },
+      {
+        "page_number": 3,
+        "word_count": 181,
+        "char_count": 1178,
+        "is_empty": false,
+        "raw_text": "3. WiFi and Broadband Support\nCustomers may experience connectivity or speed issues with their LankaLink broadband. Agents must confirm\nwhether the issue relates to WiFi, the router, or the customer’s connected device before proceeding.\n3.1 Step-by-Step Connection Procedure\n1. Confirm the broadband service is active by checking the account status. 2. Ask the customer to check whether the\nrouter power light is ON. 3. Instruct them to verify the WiFi indicator is lit or blinking. 4. If no light appears, ask them to\nrestart the router. 5. On their device, open WiFi settings and select the LankaLink network name (SSID). 6. Enter the\nprovided WiFi password printed on the router or setup card. 7. Test connectivity by opening a browser and accessing\nwww.lankalink.lk.\nIssue Cause Customer Action\nSlow Internet Too many connected devices Advise to disconnect unused devices and restart router.\nNo WiFi Signal Router malfunction or power loss Confirm power connection and restart router.\nCannot Connect Incorrect password or SSID Ask customer to re-enter credentials correctly.\nDrops frequently Weak signal or interference Relocate router away from metal objects or microwaves."
+      }
+    ]
+  },
+  {
+    "filename": "LankaLink_SIM_Card_Support_Manual.pdf",
+    "filepath": "..\\data\\LankaLink_SIM_Card_Support_Manual.pdf",
+    "doc_id": "73d2bd3ad86d",
+    "total_pages": 9,
+    "empty_pages": 0,
+    "total_words": 966,
+    "total_chars": 6257,
+    "sentence_count": 100,
+    "vocab_size": 307,
+    "avg_sent_len": 9.66,
+    "extraction_status": "ok",
+    "full_text": "LankaLink SIM Card Support Manual\nComprehensive Customer Support Reference Guide\nThis manual provides LankaLink customer care agents with complete guidance to handle all\ncustomer questions related to SIM card services. It covers SIM activation, troubleshooting,\nreplacements, roaming, data configuration, and every other scenario a customer may encounter. All\ninstructions are to be communicated clearly and professionally to ensure customer satisfaction and\nservice reliability.\n\n1. SIM Activation and Registration\nCustomers purchasing a new SIM must complete a Know Your Customer (KYC) registration before\nactivation. The process ensures the connection is securely linked to the correct identity and verified\nwith government regulations.\nSteps for SIM Activation:\n1. Request the customer’s National Identity Card (NIC) or valid passport. 2. Confirm the details\nmatch the information on the activation form. 3. Insert the SIM into a compatible mobile device and\npower it on. 4. Activation typically completes within 5–10 minutes. 5. Advise the customer to restart\ntheir device once the signal appears. 6. If activation fails after 15 minutes, advise retrying network\nregistration or contacting LankaLink Support.\nCommon Activation Errors and Solutions:\nError Message Possible Cause Solution\nSIM not provisioned SIM not registered in network Recheck ICCID number and resend activation request.\nNo Service Weak or no signal in area Restart phone, check network mode, or move to open area.\nInvalid SIM SIM damaged or expired Recommend replacement SIM from nearest LankaLink outlet.\n\n2. SIM Replacement (Lost or Damaged)\nCustomers may request SIM replacement if their card is lost, stolen, or damaged. Replacement\nensures they retain the same mobile number and account services.\nProcedure:\n1. Verify the customer’s identity using NIC and date of birth. 2. Confirm the mobile number requiring\nreplacement. 3. Advise the customer to visit the nearest LankaLink branch for SIM issue. 4.\nReplacement fee may apply depending on service policy. 5. Once issued, activation occurs within\n10 minutes. 6. Remind the customer that all stored contacts on the old SIM will be lost.\nAdditional Notes:\n- Encourage customers to back up contacts to the phone or cloud. - Stolen SIMs should be reported\nimmediately for deactivation to prevent misuse. - SIM replacement does not affect mobile plan\nbalance or validity.\n\n3. Network Connectivity Troubleshooting\nNetwork issues are among the most common customer concerns. Agents must systematically\ncheck each factor that could interrupt service.\nCommon Connectivity Issues and Fixes:\nIssue Possible Cause Customer Action\nNo Network Signal Low coverage area / Network outageMove to open area, restart phone, reselect network.\nFrequent Call Drops Weak signal or SIM misalignment Ensure SIM fits properly, disable VoLTE temporarily.\nMobile Data Not Working APN misconfiguration Guide customer to reset APN settings to default LankaLink profile.\nEmergency Calls Only SIM not registered on network Reboot device, manually select LankaLink network.\n\n4. Mobile Data and Internet Configuration\nFor data-related issues, ensure that the Access Point Name (APN) is correctly configured. Incorrect\nAPN settings are a common reason for mobile data failures.\nAPN Settings for LankaLink:\n- **Name:** LankaLink - **APN:** lanka.internet - **Username:** leave blank - **Password:** leave\nblank - **Authentication Type:** None - **APN Type:** default,supl After saving, restart the phone.\nMobile data should now function normally.\nCustomer Tips:\n- Ensure data is enabled in phone settings. - Verify mobile data balance or validity period. - If using\ndual SIM, confirm data SIM is set as primary. - Turn airplane mode on and off to refresh signal.\n\n5. Roaming and International Usage\nCustomers travelling abroad may activate international roaming to continue using their LankaLink\nnumber for calls and data.\nSteps to Enable Roaming:\n1. Ensure the SIM has been active for at least 30 days. 2. Verify sufficient balance for roaming\nactivation. 3. Send “ROAM ON” to 7070 or use the LankaLink mobile app. 4. Restart the device and\nallow up to 30 minutes for network registration. 5. Upon arrival abroad, select the preferred roaming\npartner network manually.\nRoaming Troubleshooting:\nIssue Reason Resolution\nNo roaming signal Partner network unavailable Select alternative available network manually.\nCannot make calls International call restriction Contact LankaLink support for temporary activation.\nHigh roaming charges Automatic updates or streaming Advise to disable background data or use WiFi.\n\n6. Frequently Asked Questions\nQuestion Answer\nHow can I check my SIM number? Dial *#100# and your number will be displayed.\nHow do I know if my SIM is 4G compatible? If the SIM has ‘4G LTE’ printed and works in a 4G phone, it supports 4G.\nCan I use my LankaLink SIM overseas? Yes, with roaming activated as per the instructions above.\nWhat should I do if my SIM PIN is blocked? Enter your PUK code available on the SIM pack or request from customer support.\nHow can I switch my SIM to eSIM? Visit a LankaLink outlet for eSIM activation and QR code provisioning.\nCan I use my SIM in a data dongle? Yes, ensure APN is set correctly to lanka.internet.\nWhy is my SIM deactivated? SIMs inactive for over 90 days without top-up may be automatically suspended.\n\n7. Customer Safety and Device Care\nCustomers should follow these guidelines to ensure SIM card longevity and personal safety:\n- Avoid cutting or trimming the SIM manually to fit devices. - Do not expose SIM cards to moisture\nor heat. - Always insert or remove SIMs with devices powered off. - Keep SIM packaging with PUK\ncode safely stored. - Avoid sharing SIMs with unverified persons. - Report lost SIMs promptly to\nprevent misuse.\n\n8. Glossary of Terms\n**ICCID:** Integrated Circuit Card Identifier, a unique SIM number. **PUK:** Personal Unblocking\nKey used to unlock a blocked SIM. **APN:** Access Point Name, required for data connection.\n**IMEI:** International Mobile Equipment Identity, identifies the device. **KYC:** Know Your\nCustomer, verification process for new users. **VoLTE:** Voice over LTE, allows voice calls over\n4G networks.\nEnd of Manual — LankaLink SIM Card Support Guide",
+    "pages": [
+      {
+        "page_number": 1,
+        "word_count": 63,
+        "char_count": 479,
+        "is_empty": false,
+        "raw_text": "LankaLink SIM Card Support Manual\nComprehensive Customer Support Reference Guide\nThis manual provides LankaLink customer care agents with complete guidance to handle all\ncustomer questions related to SIM card services. It covers SIM activation, troubleshooting,\nreplacements, roaming, data configuration, and every other scenario a customer may encounter. All\ninstructions are to be communicated clearly and professionally to ensure customer satisfaction and\nservice reliability."
+      },
+      {
+        "page_number": 2,
+        "word_count": 166,
+        "char_count": 1098,
+        "is_empty": false,
+        "raw_text": "1. SIM Activation and Registration\nCustomers purchasing a new SIM must complete a Know Your Customer (KYC) registration before\nactivation. The process ensures the connection is securely linked to the correct identity and verified\nwith government regulations.\nSteps for SIM Activation:\n1. Request the customer’s National Identity Card (NIC) or valid passport. 2. Confirm the details\nmatch the information on the activation form. 3. Insert the SIM into a compatible mobile device and\npower it on. 4. Activation typically completes within 5–10 minutes. 5. Advise the customer to restart\ntheir device once the signal appears. 6. If activation fails after 15 minutes, advise retrying network\nregistration or contacting LankaLink Support.\nCommon Activation Errors and Solutions:\nError Message Possible Cause Solution\nSIM not provisioned SIM not registered in network Recheck ICCID number and resend activation request.\nNo Service Weak or no signal in area Restart phone, check network mode, or move to open area.\nInvalid SIM SIM damaged or expired Recommend replacement SIM from nearest LankaLink outlet."
+      },
+      {
+        "page_number": 3,
+        "word_count": 131,
+        "char_count": 815,
+        "is_empty": false,
+        "raw_text": "2. SIM Replacement (Lost or Damaged)\nCustomers may request SIM replacement if their card is lost, stolen, or damaged. Replacement\nensures they retain the same mobile number and account services.\nProcedure:\n1. Verify the customer’s identity using NIC and date of birth. 2. Confirm the mobile number requiring\nreplacement. 3. Advise the customer to visit the nearest LankaLink branch for SIM issue. 4.\nReplacement fee may apply depending on service policy. 5. Once issued, activation occurs within\n10 minutes. 6. Remind the customer that all stored contacts on the old SIM will be lost.\nAdditional Notes:\n- Encourage customers to back up contacts to the phone or cloud. - Stolen SIMs should be reported\nimmediately for deactivation to prevent misuse. - SIM replacement does not affect mobile plan\nbalance or validity."
+      },
+      {
+        "page_number": 4,
+        "word_count": 94,
+        "char_count": 671,
+        "is_empty": false,
+        "raw_text": "3. Network Connectivity Troubleshooting\nNetwork issues are among the most common customer concerns. Agents must systematically\ncheck each factor that could interrupt service.\nCommon Connectivity Issues and Fixes:\nIssue Possible Cause Customer Action\nNo Network Signal Low coverage area / Network outageMove to open area, restart phone, reselect network.\nFrequent Call Drops Weak signal or SIM misalignment Ensure SIM fits properly, disable VoLTE temporarily.\nMobile Data Not Working APN misconfiguration Guide customer to reset APN settings to default LankaLink profile.\nEmergency Calls Only SIM not registered on network Reboot device, manually select LankaLink network."
+      },
+      {
+        "page_number": 5,
+        "word_count": 107,
+        "char_count": 684,
+        "is_empty": false,
+        "raw_text": "4. Mobile Data and Internet Configuration\nFor data-related issues, ensure that the Access Point Name (APN) is correctly configured. Incorrect\nAPN settings are a common reason for mobile data failures.\nAPN Settings for LankaLink:\n- **Name:** LankaLink - **APN:** lanka.internet - **Username:** leave blank - **Password:** leave\nblank - **Authentication Type:** None - **APN Type:** default,supl After saving, restart the phone.\nMobile data should now function normally.\nCustomer Tips:\n- Ensure data is enabled in phone settings. - Verify mobile data balance or validity period. - If using\ndual SIM, confirm data SIM is set as primary. - Turn airplane mode on and off to refresh signal."
+      },
+      {
+        "page_number": 6,
+        "word_count": 124,
+        "char_count": 847,
+        "is_empty": false,
+        "raw_text": "5. Roaming and International Usage\nCustomers travelling abroad may activate international roaming to continue using their LankaLink\nnumber for calls and data.\nSteps to Enable Roaming:\n1. Ensure the SIM has been active for at least 30 days. 2. Verify sufficient balance for roaming\nactivation. 3. Send “ROAM ON” to 7070 or use the LankaLink mobile app. 4. Restart the device and\nallow up to 30 minutes for network registration. 5. Upon arrival abroad, select the preferred roaming\npartner network manually.\nRoaming Troubleshooting:\nIssue Reason Resolution\nNo roaming signal Partner network unavailable Select alternative available network manually.\nCannot make calls International call restriction Contact LankaLink support for temporary activation.\nHigh roaming charges Automatic updates or streaming Advise to disable background data or use WiFi."
+      },
+      {
+        "page_number": 7,
+        "word_count": 140,
+        "char_count": 753,
+        "is_empty": false,
+        "raw_text": "6. Frequently Asked Questions\nQuestion Answer\nHow can I check my SIM number? Dial *#100# and your number will be displayed.\nHow do I know if my SIM is 4G compatible? If the SIM has ‘4G LTE’ printed and works in a 4G phone, it supports 4G.\nCan I use my LankaLink SIM overseas? Yes, with roaming activated as per the instructions above.\nWhat should I do if my SIM PIN is blocked? Enter your PUK code available on the SIM pack or request from customer support.\nHow can I switch my SIM to eSIM? Visit a LankaLink outlet for eSIM activation and QR code provisioning.\nCan I use my SIM in a data dongle? Yes, ensure APN is set correctly to lanka.internet.\nWhy is my SIM deactivated? SIMs inactive for over 90 days without top-up may be automatically suspended."
+      },
+      {
+        "page_number": 8,
+        "word_count": 74,
+        "char_count": 433,
+        "is_empty": false,
+        "raw_text": "7. Customer Safety and Device Care\nCustomers should follow these guidelines to ensure SIM card longevity and personal safety:\n- Avoid cutting or trimming the SIM manually to fit devices. - Do not expose SIM cards to moisture\nor heat. - Always insert or remove SIMs with devices powered off. - Keep SIM packaging with PUK\ncode safely stored. - Avoid sharing SIMs with unverified persons. - Report lost SIMs promptly to\nprevent misuse."
+      },
+      {
+        "page_number": 9,
+        "word_count": 67,
+        "char_count": 461,
+        "is_empty": false,
+        "raw_text": "8. Glossary of Terms\n**ICCID:** Integrated Circuit Card Identifier, a unique SIM number. **PUK:** Personal Unblocking\nKey used to unlock a blocked SIM. **APN:** Access Point Name, required for data connection.\n**IMEI:** International Mobile Equipment Identity, identifies the device. **KYC:** Know Your\nCustomer, verification process for new users. **VoLTE:** Voice over LTE, allows voice calls over\n4G networks.\nEnd of Manual — LankaLink SIM Card Support Guide"
+      }
+    ]
+  },
+  {
+    "filename": "LankaLink_SIM_Card_Support_Manual_v2.pdf",
+    "filepath": "..\\data\\LankaLink_SIM_Card_Support_Manual_v2.pdf",
+    "doc_id": "dc37cbdcfc60",
+    "total_pages": 9,
+    "empty_pages": 0,
+    "total_words": 1017,
+    "total_chars": 6565,
+    "sentence_count": 105,
+    "vocab_size": 298,
+    "avg_sent_len": 9.685714285714285,
+    "extraction_status": "ok",
+    "full_text": "LankaLink SIM Card Support Manual\nComprehensive Customer Support Reference Guide\nThis manual provides LankaLink customer care agents with complete guidance to handle all possible\ncustomer queries related to SIM card services. It includes step-by-step procedures, troubleshooting\ninstructions, roaming guidance, data configuration, FAQs, safety tips, and customer advice. Agents\nusing this manual will be able to answer any customer question regarding SIM functionality,\nconnectivity, replacement, and usage.\n\n1. SIM Activation and Registration\nSIM activation is the process of linking a mobile number to a customer’s identity. This is required for\nsecure mobile connectivity and to comply with regulatory requirements.\nActivation Steps in Detail:\n1. Verify customer identity with a National Identity Card (NIC) or valid passport. 2. Confirm the details\nentered on the SIM activation form match the ID. 3. Insert SIM into a compatible device and power on.\n4. Check that the device registers the LankaLink network signal. 5. Advise the customer to restart their\ndevice after activation. 6. If activation does not complete within 15 minutes, instruct the customer to\ncheck SIM seating or network mode settings.\nPossible Activation Errors and Solutions:\nError Message Possible Cause Customer Action\nSIM not provisioned Activation not completed by system Retry activation after 10 minutes or contact LankaLink support.\nNo Service Weak or no signal in area Move to open area, restart phone, check network mode.\nInvalid SIM Damaged or counterfeit SIM Request replacement at nearest LankaLink outlet.\nSIM blocked PUK code required after wrong PIN Use PUK from SIM pack or request code via LankaLink support.\n\n2. SIM Replacement\nCustomers may request a replacement SIM for reasons including loss, theft, or damage. Replacing a\nSIM ensures continuity of service and retention of the existing mobile number.\nReplacement Procedure for Customers:\n1. Confirm customer identity with NIC or passport and registered phone number. 2. Check the status of\nthe old SIM in the system (active, suspended, or blocked). 3. Advise the customer to collect the\nreplacement SIM from the nearest LankaLink branch. 4. The replacement SIM is activated typically\nwithin 10 minutes. 5. Inform the customer that stored contacts on the old SIM may be lost unless\nbacked up. 6. Advise that any pending top-ups or active services will be automatically transferred to the\nnew SIM.\nAdditional Customer Guidance:\n- Customers should report lost SIMs immediately to prevent misuse. - Back up contacts and important\nmessages. - Replacement SIMs come in standard, micro, or nano sizes; ensure compatibility with the\ndevice. - Advise customers that deactivation of the old SIM is automatic after replacement.\n\n3. Network Connectivity and Troubleshooting\nNetwork problems are frequent concerns. Agents must guide customers through structured\ntroubleshooting steps before suggesting SIM replacement or technical support.\nCommon Connectivity Issues and Actions:\nIssue Possible Cause Customer Action\nNo Signal / No Service Out of coverage / network outage Move to area with coverage, restart device, check network selection.\nCall Drops Weak signal or device antenna issueRestart device, ensure proper SIM seating, disable VoLTE temporarily.\nData Not Working Incorrect APN or data settings Reset APN settings to LankaLink default, restart device.\nEmergency Calls Only SIM not registered or blocked Reboot phone, check SIM activation status.\nSIM Not Detected SIM tray dirty or misaligned Remove and reinsert SIM carefully, clean tray contacts.\n\n4. Mobile Data Configuration\nMobile data requires correct APN (Access Point Name) settings. Misconfigured APN settings prevent\ninternet usage.\nLankaLink APN Settings:\n- APN Name: LankaLink - APN: lanka.internet - Username: leave blank - Password: leave blank -\nAuthentication: None - APN Type: default,supl\nAdditional Tips for Customers:\n- Ensure mobile data is enabled. - Check data balance and validity. - For dual SIM phones, set\nLankaLink SIM as primary for data. - Use airplane mode toggle to refresh network connection. - Restart\ndevice after changes. - For slow data, close background apps consuming bandwidth.\n\n5. Roaming and International Usage\nCustomers travelling abroad may use their LankaLink SIM for calls, SMS, and data with roaming\nenabled.\nSteps for Customers to Enable Roaming:\n1. Ensure SIM has been active for at least 30 days. 2. Verify sufficient balance for roaming activation. 3.\nActivate roaming via LankaLink app or send 'ROAM ON' to 7070. 4. Restart device; network registration\nmay take up to 30 minutes. 5. Manually select a partner network if auto-registration fails.\nRoaming Troubleshooting Table:\nIssue Reason Customer Action\nNo Signal Abroad Partner network not available Select alternative available network manually.\nCannot Make Calls International call restriction Enable international calls via LankaLink support.\nHigh Charges Automatic updates / roaming data usDaigseable background apps, use WiFi when possible.\n\n6. Frequently Asked Questions (FAQs)\nQuestion Answer\nHow can I check my SIM number? Dial *#100# to view your number or check via LankaLink app.\nWhat if my SIM is 4G compatible? Check for ‘4G LTE’ marking on SIM and use in 4G-enabled phone.\nWhat is PUK and when is it needed? PUK (Personal Unblocking Key) is required if SIM PIN is entered incorrectly 3 times.\nCan I switch my SIM to eSIM? Yes, visit a LankaLink outlet to receive eSIM QR code for device activation.\nWhy is my SIM deactivated? SIM inactive for 90+ days without top-up may be suspended.\nCan I use my SIM in a tablet or dongle? Yes, ensure APN settings are correct (lanka.internet).\nHow to report a stolen SIM? Contact LankaLink immediately and visit a branch for replacement.\nHow do I change my SIM PIN? Use phone settings or LankaLink app to update PIN securely.\n\n7. Customer Safety and Device Care\nCustomers should follow safety instructions to protect the SIM and device: - Avoid cutting SIMs\nmanually. - Keep SIM dry and avoid heat. - Insert/remove SIM with device powered off. - Keep SIM\npackaging and PUK code safe. - Do not share SIM with unknown persons. - Report lost/stolen SIM\nimmediately.\n\n8. Glossary of Terms\nICCID: Integrated Circuit Card Identifier, unique SIM number. PUK: Personal Unblocking Key for\nunlocking SIM. APN: Access Point Name, required for mobile data. IMEI: Device identifier. KYC: Know\nYour Customer, verification for SIM activation. VoLTE: Voice over LTE, allows voice calls on 4G.\nEnd of LankaLink SIM Card Support Manual",
+    "pages": [
+      {
+        "page_number": 1,
+        "word_count": 66,
+        "char_count": 507,
+        "is_empty": false,
+        "raw_text": "LankaLink SIM Card Support Manual\nComprehensive Customer Support Reference Guide\nThis manual provides LankaLink customer care agents with complete guidance to handle all possible\ncustomer queries related to SIM card services. It includes step-by-step procedures, troubleshooting\ninstructions, roaming guidance, data configuration, FAQs, safety tips, and customer advice. Agents\nusing this manual will be able to answer any customer question regarding SIM functionality,\nconnectivity, replacement, and usage."
+      },
+      {
+        "page_number": 2,
+        "word_count": 188,
+        "char_count": 1190,
+        "is_empty": false,
+        "raw_text": "1. SIM Activation and Registration\nSIM activation is the process of linking a mobile number to a customer’s identity. This is required for\nsecure mobile connectivity and to comply with regulatory requirements.\nActivation Steps in Detail:\n1. Verify customer identity with a National Identity Card (NIC) or valid passport. 2. Confirm the details\nentered on the SIM activation form match the ID. 3. Insert SIM into a compatible device and power on.\n4. Check that the device registers the LankaLink network signal. 5. Advise the customer to restart their\ndevice after activation. 6. If activation does not complete within 15 minutes, instruct the customer to\ncheck SIM seating or network mode settings.\nPossible Activation Errors and Solutions:\nError Message Possible Cause Customer Action\nSIM not provisioned Activation not completed by system Retry activation after 10 minutes or contact LankaLink support.\nNo Service Weak or no signal in area Move to open area, restart phone, check network mode.\nInvalid SIM Damaged or counterfeit SIM Request replacement at nearest LankaLink outlet.\nSIM blocked PUK code required after wrong PIN Use PUK from SIM pack or request code via LankaLink support."
+      },
+      {
+        "page_number": 3,
+        "word_count": 167,
+        "char_count": 1061,
+        "is_empty": false,
+        "raw_text": "2. SIM Replacement\nCustomers may request a replacement SIM for reasons including loss, theft, or damage. Replacing a\nSIM ensures continuity of service and retention of the existing mobile number.\nReplacement Procedure for Customers:\n1. Confirm customer identity with NIC or passport and registered phone number. 2. Check the status of\nthe old SIM in the system (active, suspended, or blocked). 3. Advise the customer to collect the\nreplacement SIM from the nearest LankaLink branch. 4. The replacement SIM is activated typically\nwithin 10 minutes. 5. Inform the customer that stored contacts on the old SIM may be lost unless\nbacked up. 6. Advise that any pending top-ups or active services will be automatically transferred to the\nnew SIM.\nAdditional Customer Guidance:\n- Customers should report lost SIMs immediately to prevent misuse. - Back up contacts and important\nmessages. - Replacement SIMs come in standard, micro, or nano sizes; ensure compatibility with the\ndevice. - Advise customers that deactivation of the old SIM is automatic after replacement."
+      },
+      {
+        "page_number": 4,
+        "word_count": 118,
+        "char_count": 827,
+        "is_empty": false,
+        "raw_text": "3. Network Connectivity and Troubleshooting\nNetwork problems are frequent concerns. Agents must guide customers through structured\ntroubleshooting steps before suggesting SIM replacement or technical support.\nCommon Connectivity Issues and Actions:\nIssue Possible Cause Customer Action\nNo Signal / No Service Out of coverage / network outage Move to area with coverage, restart device, check network selection.\nCall Drops Weak signal or device antenna issueRestart device, ensure proper SIM seating, disable VoLTE temporarily.\nData Not Working Incorrect APN or data settings Reset APN settings to LankaLink default, restart device.\nEmergency Calls Only SIM not registered or blocked Reboot phone, check SIM activation status.\nSIM Not Detected SIM tray dirty or misaligned Remove and reinsert SIM carefully, clean tray contacts."
+      },
+      {
+        "page_number": 5,
+        "word_count": 95,
+        "char_count": 617,
+        "is_empty": false,
+        "raw_text": "4. Mobile Data Configuration\nMobile data requires correct APN (Access Point Name) settings. Misconfigured APN settings prevent\ninternet usage.\nLankaLink APN Settings:\n- APN Name: LankaLink - APN: lanka.internet - Username: leave blank - Password: leave blank -\nAuthentication: None - APN Type: default,supl\nAdditional Tips for Customers:\n- Ensure mobile data is enabled. - Check data balance and validity. - For dual SIM phones, set\nLankaLink SIM as primary for data. - Use airplane mode toggle to refresh network connection. - Restart\ndevice after changes. - For slow data, close background apps consuming bandwidth."
+      },
+      {
+        "page_number": 6,
+        "word_count": 122,
+        "char_count": 831,
+        "is_empty": false,
+        "raw_text": "5. Roaming and International Usage\nCustomers travelling abroad may use their LankaLink SIM for calls, SMS, and data with roaming\nenabled.\nSteps for Customers to Enable Roaming:\n1. Ensure SIM has been active for at least 30 days. 2. Verify sufficient balance for roaming activation. 3.\nActivate roaming via LankaLink app or send 'ROAM ON' to 7070. 4. Restart device; network registration\nmay take up to 30 minutes. 5. Manually select a partner network if auto-registration fails.\nRoaming Troubleshooting Table:\nIssue Reason Customer Action\nNo Signal Abroad Partner network not available Select alternative available network manually.\nCannot Make Calls International call restriction Enable international calls via LankaLink support.\nHigh Charges Automatic updates / roaming data usDaigseable background apps, use WiFi when possible."
+      },
+      {
+        "page_number": 7,
+        "word_count": 150,
+        "char_count": 828,
+        "is_empty": false,
+        "raw_text": "6. Frequently Asked Questions (FAQs)\nQuestion Answer\nHow can I check my SIM number? Dial *#100# to view your number or check via LankaLink app.\nWhat if my SIM is 4G compatible? Check for ‘4G LTE’ marking on SIM and use in 4G-enabled phone.\nWhat is PUK and when is it needed? PUK (Personal Unblocking Key) is required if SIM PIN is entered incorrectly 3 times.\nCan I switch my SIM to eSIM? Yes, visit a LankaLink outlet to receive eSIM QR code for device activation.\nWhy is my SIM deactivated? SIM inactive for 90+ days without top-up may be suspended.\nCan I use my SIM in a tablet or dongle? Yes, ensure APN settings are correct (lanka.internet).\nHow to report a stolen SIM? Contact LankaLink immediately and visit a branch for replacement.\nHow do I change my SIM PIN? Use phone settings or LankaLink app to update PIN securely."
+      },
+      {
+        "page_number": 8,
+        "word_count": 57,
+        "char_count": 335,
+        "is_empty": false,
+        "raw_text": "7. Customer Safety and Device Care\nCustomers should follow safety instructions to protect the SIM and device: - Avoid cutting SIMs\nmanually. - Keep SIM dry and avoid heat. - Insert/remove SIM with device powered off. - Keep SIM\npackaging and PUK code safe. - Do not share SIM with unknown persons. - Report lost/stolen SIM\nimmediately."
+      },
+      {
+        "page_number": 9,
+        "word_count": 54,
+        "char_count": 353,
+        "is_empty": false,
+        "raw_text": "8. Glossary of Terms\nICCID: Integrated Circuit Card Identifier, unique SIM number. PUK: Personal Unblocking Key for\nunlocking SIM. APN: Access Point Name, required for mobile data. IMEI: Device identifier. KYC: Know\nYour Customer, verification for SIM activation. VoLTE: Voice over LTE, allows voice calls on 4G.\nEnd of LankaLink SIM Card Support Manual"
+      }
+    ]
+  },
+  {
+    "filename": "SIM_Card_Service_Support_Manual.pdf",
+    "filepath": "..\\data\\SIM_Card_Service_Support_Manual.pdf",
+    "doc_id": "86fa8957a229",
+    "total_pages": 1,
+    "empty_pages": 0,
+    "total_words": 202,
+    "total_chars": 1486,
+    "sentence_count": 13,
+    "vocab_size": 100,
+    "avg_sent_len": 15.538461538461538,
+    "extraction_status": "ok",
+    "full_text": "LankaLink SIM Card Service Support Manual\nPurpose and Scope\nThis manual provides procedures and reference information for LankaLink customer care agents\nhandling SIM card-related services, including activation, replacement, troubleshooting, and plan\nmanagement.\nSIM Activation and Registration\nAgents must verify customer identity per KYC policy before activation. Use the Customer Onboarding\nSystem (COS) to input NIC details, capture SIM ICCID, and confirm number assignment. Activation\ntypically occurs within 10 minutes after successful verification.\nSIM Replacement and Lost SIM Handling\nFor lost or damaged SIMs, confirm customer identity using two-factor verification (NIC and recent call\nrecord). Register replacement in COS, disable the old SIM immediately, and issue a replacement.\nInform customers about activation delays and service reinitialisation.\nNetwork Troubleshooting\nIf customers report no signal, instruct them to restart the device, reinsert the SIM, and test in another\nphone. If unresolved, log a ticket for backend network verification.\nNumber Portability and Transfers\nAssist customers requesting to transfer numbers between accounts. Ensure both accounts are verified\nand all dues cleared before initiating a Mobile Number Portability (MNP) request.\nPlan Conversions and Data Packs\nCustomers may convert between prepaid and postpaid plans through the billing portal. Confirm\neligibility, apply conversion, and verify the data pack activation post-transaction.",
+    "pages": [
+      {
+        "page_number": 1,
+        "word_count": 202,
+        "char_count": 1486,
+        "is_empty": false,
+        "raw_text": "LankaLink SIM Card Service Support Manual\nPurpose and Scope\nThis manual provides procedures and reference information for LankaLink customer care agents\nhandling SIM card-related services, including activation, replacement, troubleshooting, and plan\nmanagement.\nSIM Activation and Registration\nAgents must verify customer identity per KYC policy before activation. Use the Customer Onboarding\nSystem (COS) to input NIC details, capture SIM ICCID, and confirm number assignment. Activation\ntypically occurs within 10 minutes after successful verification.\nSIM Replacement and Lost SIM Handling\nFor lost or damaged SIMs, confirm customer identity using two-factor verification (NIC and recent call\nrecord). Register replacement in COS, disable the old SIM immediately, and issue a replacement.\nInform customers about activation delays and service reinitialisation.\nNetwork Troubleshooting\nIf customers report no signal, instruct them to restart the device, reinsert the SIM, and test in another\nphone. If unresolved, log a ticket for backend network verification.\nNumber Portability and Transfers\nAssist customers requesting to transfer numbers between accounts. Ensure both accounts are verified\nand all dues cleared before initiating a Mobile Number Portability (MNP) request.\nPlan Conversions and Data Packs\nCustomers may convert between prepaid and postpaid plans through the billing portal. Confirm\neligibility, apply conversion, and verify the data pack activation post-transaction."
+      }
+    ]
+  },
+  {
+    "filename": "WiFi_and_Broadband_Support_Manual.pdf",
+    "filepath": "..\\data\\WiFi_and_Broadband_Support_Manual.pdf",
+    "doc_id": "ca4d2b6723ba",
+    "total_pages": 1,
+    "empty_pages": 0,
+    "total_words": 195,
+    "total_chars": 1362,
+    "sentence_count": 12,
+    "vocab_size": 98,
+    "avg_sent_len": 16.25,
+    "extraction_status": "ok",
+    "full_text": "LankaLink WiFi and Broadband Support Manual\nPurpose and Scope\nThis guide provides detailed steps for agents addressing WiFi and broadband-related customer queries,\nincluding connection setup, troubleshooting, and maintenance escalation.\nRouter Setup and Configuration\nAgents should walk customers through connecting power and network cables, waiting for the Power\nand Internet LEDs to stabilise, and accessing the router interface using the default IP 192.168.1.1.\nCredentials are printed on the device.\nConnection Troubleshooting\nInstruct users to check if the Internet light is solid green. If not, advise a router reboot. If unresolved,\ncheck line stability through the Network Diagnostic Tool and log an escalation to technical support.\nSlow Internet Speed\nConfirm the number of connected devices, advise speed tests via LankaLink SpeedCheck, and clear\nbrowser cache. If results are below threshold, escalate to network optimisation.\nRouter Reset and Password Management\nFor forgotten WiFi passwords, guide the customer to reset via router settings or press the reset button\nfor 10 seconds. Remind them to reconfigure network name and password securely.\nService Upgrade or Relocation\nAgents must verify the service address, check coverage maps, and initiate upgrade or relocation\nrequests through the CRM. Installation is scheduled within three working days.",
+    "pages": [
+      {
+        "page_number": 1,
+        "word_count": 195,
+        "char_count": 1362,
+        "is_empty": false,
+        "raw_text": "LankaLink WiFi and Broadband Support Manual\nPurpose and Scope\nThis guide provides detailed steps for agents addressing WiFi and broadband-related customer queries,\nincluding connection setup, troubleshooting, and maintenance escalation.\nRouter Setup and Configuration\nAgents should walk customers through connecting power and network cables, waiting for the Power\nand Internet LEDs to stabilise, and accessing the router interface using the default IP 192.168.1.1.\nCredentials are printed on the device.\nConnection Troubleshooting\nInstruct users to check if the Internet light is solid green. If not, advise a router reboot. If unresolved,\ncheck line stability through the Network Diagnostic Tool and log an escalation to technical support.\nSlow Internet Speed\nConfirm the number of connected devices, advise speed tests via LankaLink SpeedCheck, and clear\nbrowser cache. If results are below threshold, escalate to network optimisation.\nRouter Reset and Password Management\nFor forgotten WiFi passwords, guide the customer to reset via router settings or press the reset button\nfor 10 seconds. Remind them to reconfigure network name and password securely.\nService Upgrade or Relocation\nAgents must verify the service address, check coverage maps, and initiate upgrade or relocation\nrequests through the CRM. Installation is scheduled within three working days."
+      }
+    ]
+  }
+]

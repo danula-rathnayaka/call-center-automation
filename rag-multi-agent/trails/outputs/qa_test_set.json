@@ -1,0 +1,308 @@
+[
+  {
+    "q_id": "Q01",
+    "question": "How do I activate my new LankaLink SIM card?",
+    "reference_answer": "Insert SIM, power on device, wait up to 10 minutes. If it fails, manually select LankaLink network in Settings.",
+    "relevant_chunk_indices": [
+      0,
+      1,
+      3
+    ],
+    "q_type": "procedural"
+  },
+  {
+    "q_id": "Q02",
+    "question": "What documents do I need to register a new SIM?",
+    "reference_answer": "National Identity Card (NIC) or valid passport for KYC registration.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "policy"
+  },
+  {
+    "q_id": "Q03",
+    "question": "My SIM shows no service. What should I do?",
+    "reference_answer": "Move to open area, restart phone, reselect LankaLink network manually, check for network outage.",
+    "relevant_chunk_indices": [
+      0,
+      1,
+      3
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q04",
+    "question": "How long does SIM activation usually take?",
+    "reference_answer": "Activation typically completes within 5 to 10 minutes.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q05",
+    "question": "The screen shows SIM not provisioned error. What does that mean?",
+    "reference_answer": "The SIM is not registered in the network. Recheck the ICCID number and resend the activation request.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q06",
+    "question": "What is KYC and why is it required for a SIM?",
+    "reference_answer": "KYC stands for Know Your Customer. It is a verification process required to securely link the SIM to the correct identity per government regulations.",
+    "relevant_chunk_indices": [
+      1,
+      2,
+      3
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q07",
+    "question": "I lost my SIM card. How do I get a replacement?",
+    "reference_answer": "Visit the nearest LankaLink branch with your NIC. A replacement fee may apply. Activation takes 10 minutes.",
+    "relevant_chunk_indices": [
+      0,
+      1,
+      3,
+      5
+    ],
+    "q_type": "procedural"
+  },
+  {
+    "q_id": "Q08",
+    "question": "Will my contacts be saved when I replace my SIM?",
+    "reference_answer": "No. All contacts stored on the old SIM will be lost. Customers should back up contacts to phone or cloud before replacement.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "policy"
+  },
+  {
+    "q_id": "Q09",
+    "question": "My SIM was stolen. What should I do immediately?",
+    "reference_answer": "Report immediately to LankaLink for SIM deactivation to prevent misuse.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "policy"
+  },
+  {
+    "q_id": "Q10",
+    "question": "Does replacing my SIM affect my mobile plan balance?",
+    "reference_answer": "No, SIM replacement does not affect mobile plan balance or validity.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "policy"
+  },
+  {
+    "q_id": "Q11",
+    "question": "My mobile data is not working. How do I fix the APN settings?",
+    "reference_answer": "Set APN to lanka.internet, leave username and password blank, authentication type None. Restart phone after saving.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q12",
+    "question": "What is the correct APN for LankaLink mobile internet?",
+    "reference_answer": "APN name is lanka.internet with no username or password required.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q13",
+    "question": "My phone says Emergency Calls Only. What is wrong?",
+    "reference_answer": "The SIM is not registered on the network. Reboot device and manually select LankaLink network.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q14",
+    "question": "Can I use my LankaLink SIM in a data dongle or WiFi hotspot device?",
+    "reference_answer": "Yes, ensure APN is set correctly to lanka.internet.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q15",
+    "question": "How do I enable international roaming on my LankaLink SIM?",
+    "reference_answer": "Send ROAM ON to 7070 or use the LankaLink app. SIM must be active for at least 30 days.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "procedural"
+  },
+  {
+    "q_id": "Q16",
+    "question": "I am abroad but there is no roaming signal. What should I do?",
+    "reference_answer": "Select an alternative available roaming partner network manually from the phone's network settings.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q17",
+    "question": "Why is my roaming bill so high? I did not make many calls.",
+    "reference_answer": "Background app data or streaming may have consumed data while roaming. Advise to disable background data or use WiFi only.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q18",
+    "question": "My SIM PIN is blocked. How do I unblock it?",
+    "reference_answer": "Enter the PUK code available on the SIM packaging or request it from customer support.",
+    "relevant_chunk_indices": [
+      1,
+      2,
+      3
+    ],
+    "q_type": "procedural"
+  },
+  {
+    "q_id": "Q19",
+    "question": "What is a PUK code and where can I find it?",
+    "reference_answer": "PUK stands for Personal Unblocking Key. It is printed on the SIM packaging or can be requested from customer support.",
+    "relevant_chunk_indices": [
+      1,
+      2,
+      3
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q20",
+    "question": "Why has my SIM been deactivated automatically?",
+    "reference_answer": "SIMs inactive for over 90 days without a top-up may be automatically suspended.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "policy"
+  },
+  {
+    "q_id": "Q21",
+    "question": "How do I connect to my LankaLink WiFi for the first time?",
+    "reference_answer": "Check router power light, verify WiFi indicator, select LankaLink SSID, enter password from router label, test by visiting www.lankalink.lk.",
+    "relevant_chunk_indices": [
+      0,
+      6
+    ],
+    "q_type": "procedural"
+  },
+  {
+    "q_id": "Q22",
+    "question": "My internet is very slow. What could be causing it?",
+    "reference_answer": "Too many connected devices. Disconnect unused devices and restart the router.",
+    "relevant_chunk_indices": [
+      0,
+      6
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q23",
+    "question": "There is no WiFi signal at all. The router looks fine though.",
+    "reference_answer": "Router may have malfunctioned. Confirm power connection and restart router.",
+    "relevant_chunk_indices": [
+      0,
+      6
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q24",
+    "question": "My WiFi keeps dropping every few minutes. How do I fix this?",
+    "reference_answer": "Weak signal or interference. Relocate router away from metal objects and microwaves.",
+    "relevant_chunk_indices": [
+      0,
+      6
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q25",
+    "question": "I forgot my WiFi password. Where can I find it?",
+    "reference_answer": "The WiFi password is printed on the router or the setup card provided during installation.",
+    "relevant_chunk_indices": [
+      0,
+      6
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q26",
+    "question": "Can I keep my number when switching to LankaLink?",
+    "reference_answer": "Yes, LankaLink supports number portability. Contact customer service to initiate the transfer process.",
+    "relevant_chunk_indices": [
+      5
+    ],
+    "q_type": "policy"
+  },
+  {
+    "q_id": "Q27",
+    "question": "How do I check what number is on my SIM?",
+    "reference_answer": "Dial *#100# and your number will be displayed on screen.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q28",
+    "question": "Is my SIM 4G compatible?",
+    "reference_answer": "If the SIM has 4G LTE printed on it and works in a 4G phone, it supports 4G.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "factual"
+  },
+  {
+    "q_id": "Q29",
+    "question": "My calls keep dropping frequently. Is this a SIM problem?",
+    "reference_answer": "Possibly. Check SIM is seated properly and disable VoLTE temporarily.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "troubleshooting"
+  },
+  {
+    "q_id": "Q30",
+    "question": "How do I switch to an eSIM?",
+    "reference_answer": "Visit a LankaLink outlet for eSIM activation and QR code provisioning.",
+    "relevant_chunk_indices": [
+      1,
+      3
+    ],
+    "q_type": "procedural"
+  }
+]
