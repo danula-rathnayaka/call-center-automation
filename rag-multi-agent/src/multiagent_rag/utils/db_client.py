@@ -137,6 +137,71 @@ class PineconeClient:
             logger.error(f"Duplicate check failed: {e}")
             return False
 
+    def list_by_type(self, doc_type: str) -> list:
+        seen_sources: set = set()
+        entries: list = []
+        try:
+            stats = self._index.describe_index_stats()
+            total = stats.get("total_vector_count", 0)
+            if total == 0:
+                return []
+
+            dummy_vec = [0.0] * 384
+            results = self._index.query(
+                vector=dummy_vec,
+                top_k=min(total, 10000),
+                include_metadata=True,
+                filter={"type": {"$eq": doc_type}},
+            )
+
+            for match in results.get("matches", []):
+                meta = match.get("metadata", {})
+                source = meta.get("source", "")
+                if not source or source in seen_sources:
+                    continue
+                seen_sources.add(source)
+                entries.append({
+                    "source": source,
+                    "title": meta.get("title", ""),
+                    "type": meta.get("type", doc_type),
+                    "document_hash": meta.get("document_hash", ""),
+                })
+
+            logger.info(f"Listed {len(entries)} unique sources of type='{doc_type}'")
+            return entries
+        except Exception as e:
+            logger.error(f"list_by_type failed for type='{doc_type}': {e}")
+            return []
+
+    def delete_by_source(self, source: str) -> int:
+        """Delete all vectors whose metadata.source equals `source`. Returns deleted count."""
+        try:
+            stats = self._index.describe_index_stats()
+            total = stats.get("total_vector_count", 0)
+            if total == 0:
+                return 0
+
+            dummy_vec = [0.0] * 384
+            results = self._index.query(
+                vector=dummy_vec,
+                top_k=min(total, 10000),
+                include_metadata=False,
+                filter={"source": {"$eq": source}},
+            )
+            ids_to_delete = [m["id"] for m in results.get("matches", [])]
+            if not ids_to_delete:
+                return 0
+
+            batch_size = 1000
+            for i in range(0, len(ids_to_delete), batch_size):
+                self._index.delete(ids=ids_to_delete[i: i + batch_size])
+
+            logger.info(f"Deleted {len(ids_to_delete)} vectors for source='{source}'")
+            return len(ids_to_delete)
+        except Exception as e:
+            logger.error(f"delete_by_source failed for source='{source}': {e}")
+            raise
+
     def delete_all(self):
         try:
             self._index.delete(delete_all=True)

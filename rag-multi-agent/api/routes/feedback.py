@@ -19,7 +19,18 @@ os.makedirs(_log_dir, exist_ok=True)
 _write_lock = threading.Lock()
 
 
-@router.post("", response_model=FeedbackResponse)
+@router.post(
+    "",
+    response_model=FeedbackResponse,
+    summary="Submit customer feedback on an AI response",
+    description=(
+        "Records a thumbs-up/thumbs-down/neutral rating for a specific AI response. "
+        "Include the `session_id`, the exact `query` and `response` text, and a `rating` of `positive`, `negative`, or `neutral`. "
+        "Optionally provide `correct_answer` (what the right answer should have been) and a `comment`. "
+        "This data is appended to a JSONL log file and can feed future model fine-tuning or quality reviews. "
+        "Show a feedback widget (thumbs up/down) on each chat bubble and call this endpoint on interaction."
+    ),
+)
 async def submit_feedback(request: FeedbackRequest):
     entry = {"timestamp": datetime.now(timezone.utc).isoformat(), "session_id": request.session_id,
         "query": request.query, "response": request.response, "rating": request.rating,
@@ -36,7 +47,14 @@ async def submit_feedback(request: FeedbackRequest):
         raise HTTPException(status_code=500, detail=f"Failed to record feedback: {str(e)}")
 
 
-@router.get("/stats")
+@router.get(
+    "/stats",
+    summary="Get aggregated feedback rating counts",
+    description=(
+        "Returns the total number of feedback submissions broken down by rating: `positive`, `negative`, `neutral`. "
+        "Use this on an admin metrics dashboard to monitor overall response quality trends over time."
+    ),
+)
 async def get_feedback_stats():
     try:
         if not os.path.exists(_feedback_file):

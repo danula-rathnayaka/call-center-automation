@@ -65,6 +65,86 @@ class KnowledgeResetResponse(BaseModel):
     message: str
 
 
+class DocumentEntry(BaseModel):
+    source: str
+    type: str
+    document_hash: str = ""
+
+
+class IngestedDocumentsResponse(BaseModel):
+    total: int
+    documents: List[DocumentEntry]
+
+
+class IngestedURLsResponse(BaseModel):
+    total: int
+    urls: List[DocumentEntry]
+
+
+class DeleteKnowledgeResponse(BaseModel):
+    status: str
+    source: str
+    vectors_deleted: int
+    message: str
+
+
+class ToolEntry(BaseModel):
+    tool_name: str
+    description: str
+    api_url: str
+    http_method: str
+
+
+class ToolListResponse(BaseModel):
+    total: int
+    tools: List[ToolEntry]
+
+
+class DeleteToolResponse(BaseModel):
+    status: str
+    tool_name: str
+    message: str
+
+
+class HandoffQueueItem(BaseModel):
+    id: int
+    session_id: str
+    query: str
+    emotion: str = "neutral"
+    escalation_reason: str = ""
+    intent: str = "unknown"
+    status: str
+    created_at: str
+    answered_at: Optional[str] = None
+    actioned_at: Optional[str] = None
+
+
+class HandoffQueueResponse(BaseModel):
+    total: int
+    ringing: int
+    answered: int
+    items: List[HandoffQueueItem]
+
+
+class HandoffHistoryResponse(BaseModel):
+    total: int
+    items: List[HandoffQueueItem]
+
+
+class HandoffDashboardResponse(BaseModel):
+    ringing: int
+    answered: int
+    ended: int
+    active_calls: List[HandoffQueueItem]
+
+
+class HandoffActionResponse(BaseModel):
+    status: str
+    handoff_id: int
+    session_id: str
+    message: str
+
+
 class SessionMessage(BaseModel):
     timestamp: str
     query: str

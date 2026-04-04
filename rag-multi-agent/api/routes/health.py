@@ -7,7 +7,18 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api", tags=["Health"])
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    summary="System health check — all components",
+    description=(
+        "Probes every major system component and returns its status: "
+        "Pinecone Vector DB, dense embedding model (all-MiniLM-L6-v2), BM25 sparse encoder, "
+        "emotion detection model, confidence scoring model, fine-tuned LLM, and the compiled LangGraph workflow. "
+        "Overall `status` is `healthy` if all critical components pass, or `degraded` if any fail. "
+        "Call this on app startup and periodically to display a system status indicator in the admin panel."
+    ),
+)
 async def health_check():
     components = []
     overall_healthy = True

@@ -40,7 +40,21 @@ def _build_response(result: dict, session_id: str, transcribed_text: str = "") -
             should_escalate=result.get("should_escalate", False), ), latency_ms=latency_out, )
 
 
-@router.post("", response_model=ChatResponse)
+@router.post(
+    "",
+    response_model=ChatResponse,
+    summary="Send a text message to the AI agent",
+    description=(
+        "Submit a plain-text customer query to the full multi-agent RAG pipeline. "
+        "The system runs through: session loading → emotion detection → safety guardrail → "
+        "intent routing → (RAG retrieval + reranking + generation) OR (tool calls) OR (casual response) → "
+        "confidence evaluation → history summarization. "
+        "**Always pass a `session_id`** so conversation history is preserved across turns. "
+        "If omitted, a new session UUID is generated per call and history will not persist. "
+        "Check `confidence.should_escalate` in the response — if `true`, the backend has already "
+        "enqueued a human handoff and the frontend should display a handoff notification to the customer."
+    ),
+)
 async def chat(request: ChatRequest):
     session_id = request.session_id or str(uuid.uuid4())
 
@@ -56,8 +70,20 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Failed to process query: {str(e)}")
 
 
-@router.post("/voice", response_model=ChatResponse)
-async def chat_voice(audio: UploadFile = File(...), session_id: str = None, ):
+@router.post(
+    "/voice",
+    response_model=ChatResponse,
+    summary="Send a voice/audio message to the AI agent",
+    description=(
+        "Upload an audio file (WAV, MP3, etc.) containing the customer's spoken query. "
+        "The pipeline first transcribes the audio using the STT engine, then runs the "
+        "transcribed text through the identical multi-agent RAG pipeline as the text endpoint. "
+        "Emotion is additionally detected from the audio signal itself when available. "
+        "The response includes `transcribed_text` so the UI can show the customer what was heard. "
+        "Pass `session_id` as a query parameter to link this voice turn to an ongoing conversation."
+    ),
+)
+async def chat_voice(audio: UploadFile = File(...), session_id: str = None):
     session_id = session_id or str(uuid.uuid4())
 
     try:
@@ -89,7 +115,19 @@ async def chat_voice(audio: UploadFile = File(...), session_id: str = None, ):
         raise HTTPException(status_code=500, detail=f"Failed to process voice: {str(e)}")
 
 
-@router.post("/stream")
+@router.post(
+    "/stream",
+    summary="Stream AI response tokens in real time (Server-Sent Events)",
+    description=(
+        "Identical to `POST /api/chat` but streams the response token-by-token using "
+        "Server-Sent Events (SSE). Connect with `EventSource` or `fetch` with a readable stream. "
+        "Each SSE event has a `type` field: "
+        "`token` — a partial response chunk to append to the UI; "
+        "`done` — full metadata (emotion, intent, confidence, latency_ms, should_escalate) sent once generation finishes; "
+        "`error` — emitted if the pipeline fails mid-stream. "
+        "If `should_escalate` is `true` in the `done` event, show the escalation notice and poll `GET /api/handoff/queue`."
+    ),
+)
 async def chat_stream(request: ChatRequest):
     session_id = request.session_id or str(uuid.uuid4())
 
@@ -128,7 +166,17 @@ async def chat_stream(request: ChatRequest):
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", }, )
 
 
-@router.get("/history/{session_id}", response_model=SessionHistoryResponse)
+@router.get(
+    "/history/{session_id}",
+    response_model=SessionHistoryResponse,
+    summary="Retrieve full conversation history for a session",
+    description=(
+        "Returns all logged interaction turns for the given `session_id`, ordered chronologically. "
+        "Each message includes the customer's query, the AI's response, detected emotion, "
+        "response confidence score, and UTC timestamp. "
+        "Use this to power a chat history panel or to pre-load context when a user reopens an existing conversation."
+    ),
+)
 async def get_session_history(session_id: str):
     try:
         history = _interaction_logger.get_session_history(session_id)
