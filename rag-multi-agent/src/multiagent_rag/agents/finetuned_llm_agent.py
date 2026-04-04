@@ -45,6 +45,8 @@ class FinetunedLLMAgent:
             self._fallback_generator = Generator()
         return self._fallback_generator
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def generate(self, query: str, context: str, emotion: str, history: List[BaseMessage],
             summary: Optional[str] = None, ) -> str:
         if self._pipeline_ready:

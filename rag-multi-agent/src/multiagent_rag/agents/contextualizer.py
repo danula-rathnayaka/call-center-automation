@@ -20,6 +20,15 @@ class Contextualizer:
         with open(os.path.join(_prompts_dir, "contextualizer_prompt.txt"), "r", encoding="utf-8") as f:
             template_text = f.read()
 
+        from multiagent_rag.utils.telemetry import get_langfuse_client
+        client = get_langfuse_client()
+        if client:
+            try:
+                lf_prompt = client.get_prompt("contextualizer_prompt", type="text", fallback=template_text)
+                template_text = lf_prompt.get_langchain_prompt()
+            except Exception as e:
+                logger.warning(f"Could not load contextualizer_prompt from Langfuse: {e}")
+
         self.prompt = ChatPromptTemplate.from_messages(
             [("system", template_text), ("placeholder", "{chat_history}"), ("human", "{input}"), ])
         self.chain = self.prompt | self.llm | StrOutputParser()
@@ -29,6 +38,8 @@ class Contextualizer:
     def _invoke_with_retry(self, payload: dict) -> str:
         return self.chain.invoke(payload)
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def reformulate(self, query: str, history: List[BaseMessage], summary: Optional[str] = None, ) -> str:
         if not history and not summary:
             return query

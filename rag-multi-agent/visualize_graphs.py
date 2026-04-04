@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from multiagent_rag.graph.rag_workflow import rag_app
 from multiagent_rag.graph.ingestion_workflow import ingestion_app
+from multiagent_rag.graph.web_scraper_workflow import web_scraper_app
 
 output_dir = os.path.join(os.path.dirname(__file__), "docs")
 os.makedirs(output_dir, exist_ok=True)
@@ -20,3 +21,9 @@ ingestion_path = os.path.join(output_dir, "ingestion_workflow_graph.png")
 with open(ingestion_path, "wb") as f:
     f.write(ingestion_png)
 print(f"Ingestion workflow graph saved: {ingestion_path}")
+
+web_scraper_png = web_scraper_app.get_graph().draw_mermaid_png()
+web_scraper_path = os.path.join(output_dir, "web_scraper_workflow_graph.png")
+with open(web_scraper_path, "wb") as f:
+    f.write(web_scraper_png)
+print(f"Web scraper workflow graph saved: {web_scraper_path}")

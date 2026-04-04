@@ -139,7 +139,7 @@ def blocked_response_node(state: RAGState):
 
 def contextualize_node(state: RAGState):
     start = time.time()
-    query = _guardrail.pii.sanitize_for_rag(state["query"])
+    query = state["query"]
     history = state.get("chat_history", [])
     summary = state.get("conversation_summary")
 
@@ -199,7 +199,7 @@ def reranker_node(state: RAGState):
 def generate_node(state: RAGState):
     start = time.time()
     raw_query = state["query"]
-    safe_query = _guardrail.pii.sanitize_for_rag(raw_query)
+    safe_query = raw_query
     docs = state["retrieved_docs"]
     history = state.get("chat_history", [])
     summary = state.get("conversation_summary")

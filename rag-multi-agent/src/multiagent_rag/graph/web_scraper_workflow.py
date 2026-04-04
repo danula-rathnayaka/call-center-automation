@@ -36,6 +36,15 @@ _prompts_dir = os.path.join(os.path.dirname(__file__), "..", "..", "prompts")
 with open(os.path.join(_prompts_dir, "scraper_classifier_prompt.txt"), "r", encoding="utf-8") as f:
     _classifier_system_prompt = f.read()
 
+from multiagent_rag.utils.telemetry import get_langfuse_client
+client = get_langfuse_client()
+if client:
+    try:
+        lf_prompt = client.get_prompt("scraper_classifier_prompt", type="text", fallback=_classifier_system_prompt)
+        _classifier_system_prompt = lf_prompt.get_langchain_prompt()
+    except Exception as e:
+        logger.warning(f"Could not load scraper_classifier_prompt from Langfuse: {e}")
+
 _CLASSIFIER_PROMPT = ChatPromptTemplate.from_messages(
     [("system", _classifier_system_prompt),
         ("human", "URL: {url}\nTitle: {title}\n\nContent preview:\n{preview}"), ])

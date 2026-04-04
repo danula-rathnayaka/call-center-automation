@@ -26,6 +26,15 @@ class IntentRouter:
         with open(prompt_path, "r", encoding="utf-8") as f:
             template_text = f.read()
 
+        from multiagent_rag.utils.telemetry import get_langfuse_client
+        client = get_langfuse_client()
+        if client:
+            try:
+                lf_prompt = client.get_prompt("rag_router_prompt", type="text", fallback=template_text)
+                template_text = lf_prompt.get_langchain_prompt()
+            except Exception as e:
+                logger.warning(f"Could not load rag_router_prompt from Langfuse: {e}")
+
         self.prompt = ChatPromptTemplate.from_template(template_text)
         self.chain = self.prompt | self.llm | self.parser
 

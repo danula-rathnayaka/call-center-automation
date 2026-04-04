@@ -17,7 +17,7 @@ class TTSEngine:
         return cls._instance
 
     def _initialize(self):
-        print("🔊 [TTS] Initializing Microsoft Edge Neural Engine...")
+        print("[TTS] Initializing Microsoft Edge Neural Engine...")
         pygame.mixer.init()
 
     # We use an async wrapper function to handle the edge-tts generation safely

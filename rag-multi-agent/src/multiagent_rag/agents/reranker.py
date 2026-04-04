@@ -19,6 +19,8 @@ class Reranker:
         logger.info("Initializing Cross-Encoder reranker model")
         self._model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
+    from langfuse import observe
+    @observe()
     def rerank(self, query: str, docs: list, top_k: int = 3) -> list:
         if not docs:
             return []

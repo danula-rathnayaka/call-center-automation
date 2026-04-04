@@ -12,6 +12,7 @@ from multiagent_rag.utils.embeddings import EmbeddingManager
 from multiagent_rag.utils.sparse import SparseEmbeddingManager
 from multiagent_rag.utils.voice import VoiceHandler
 from multiagent_rag.utils.tts import TTSEngine
+from multiagent_rag.utils.telemetry import get_langfuse_handler, get_langfuse_client
 
 st.set_page_config(page_title="Telecom AI Agent", page_icon="🎧", layout="centered")
 
@@ -93,9 +94,22 @@ with col2:
 
             with st.chat_message("assistant"):
                 with st.spinner("Analyzing..."):
-                    config = {"configurable": {"thread_id": st.session_state.thread_id}}
+
+                    langfuse_handler = get_langfuse_handler()
+                    callbacks = [langfuse_handler] if langfuse_handler else []
+                    config = {"configurable": {"thread_id": st.session_state.thread_id}, "callbacks": callbacks}
                     result = rag_app.invoke({"query": user_query}, config=config)
-                    final_answer = result["final_answer"]
+                    final_answer = result.get("final_answer", "")
+
+                    if langfuse_handler and get_langfuse_client():
+                        trace_id = langfuse_handler.get_trace_id()
+                        if trace_id and "response_confidence" in result:
+                            get_langfuse_client().score(
+                                trace_id=trace_id,
+                                name="response_confidence",
+                                value=result["response_confidence"]
+                            )
+                        get_langfuse_client().flush()
 
                     st.markdown(final_answer)
                     st.session_state.messages.append({"role": "assistant", "content": final_answer})
@@ -112,9 +126,22 @@ if text_query:
 
     with st.chat_message("assistant"):
         with st.spinner("Analyzing..."):
-            config = {"configurable": {"thread_id": st.session_state.thread_id}}
+
+            langfuse_handler = get_langfuse_handler()
+            callbacks = [langfuse_handler] if langfuse_handler else []
+            config = {"configurable": {"thread_id": st.session_state.thread_id}, "callbacks": callbacks}
             result = rag_app.invoke({"query": text_query}, config=config)
-            final_answer = result["final_answer"]
+            final_answer = result.get("final_answer", "")
+
+            if langfuse_handler and get_langfuse_client():
+                trace_id = langfuse_handler.get_trace_id()
+                if trace_id and "response_confidence" in result:
+                    get_langfuse_client().score(
+                        trace_id=trace_id,
+                        name="response_confidence",
+                        value=result["response_confidence"]
+                    )
+                get_langfuse_client().flush()
 
             st.markdown(final_answer)
             st.session_state.messages.append({"role": "assistant", "content": final_answer})

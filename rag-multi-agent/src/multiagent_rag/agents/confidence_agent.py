@@ -49,6 +49,8 @@ class ConfidenceAgent:
             logger.warning(f"ConfidentModel could not be loaded ({e}). Using heuristic fallback.")
             return None
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def evaluate(self, query: str, response: str, retrieved_chunks: list, emotion: str) -> dict:
         try:
             if self._model is not None:

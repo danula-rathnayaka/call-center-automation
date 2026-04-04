@@ -53,6 +53,7 @@ dependencies = [
     "bitsandbytes-windows>=0.37.5",
     "huggingface-hub[hf-xet]>=0.36.0",
     "hf-xet>=1.2.0",
+    "langfuse>=4.0.6",
 ]
 
 [tool.setuptools]

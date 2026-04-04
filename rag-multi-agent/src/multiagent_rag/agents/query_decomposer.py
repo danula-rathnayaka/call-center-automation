@@ -18,6 +18,15 @@ class QueryDecomposer:
         with open(os.path.join(_prompts_dir, "query_decomposer_prompt.txt"), "r", encoding="utf-8") as f:
             template_text = f.read()
 
+        from multiagent_rag.utils.telemetry import get_langfuse_client
+        client = get_langfuse_client()
+        if client:
+            try:
+                lf_prompt = client.get_prompt("query_decomposer_prompt", type="text", fallback=template_text)
+                template_text = lf_prompt.get_langchain_prompt()
+            except Exception as e:
+                logger.warning(f"Could not load query_decomposer_prompt from Langfuse: {e}")
+
         self.prompt = ChatPromptTemplate.from_messages([("system", template_text), ("human", "{query}"), ])
         self.chain = self.prompt | self.llm | StrOutputParser()
 
@@ -26,6 +35,8 @@ class QueryDecomposer:
     def _invoke_with_retry(self, query: str) -> str:
         return self.chain.invoke({"query": query})
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def decompose(self, query: str) -> list:
         try:
             result = self._invoke_with_retry(query)

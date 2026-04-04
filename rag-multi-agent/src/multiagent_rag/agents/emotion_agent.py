@@ -43,6 +43,8 @@ class EmotionAgent:
             self._model = False
             self._predict_fn = None
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def detect_from_audio(self, audio_path: str) -> dict:
         if self._model and self._predict_fn and audio_path:
             try:
@@ -53,6 +55,8 @@ class EmotionAgent:
                 logger.error(f"Emotion detection from audio failed: {e}")
         return {"emotion": "neutral", "confidence": 0.0}
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def detect_from_text(self, text: str) -> dict:
         return self._keyword_fallback(text)
 

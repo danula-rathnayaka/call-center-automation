@@ -27,6 +27,8 @@ class ToolAgent:
             ("human", "{query}"),
         ])
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def invoke(self, query: str, history: list):
         current_tools = get_dynamic_tools()
 

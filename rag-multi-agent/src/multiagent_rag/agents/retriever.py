@@ -8,6 +8,8 @@ class Retriever:
     def __init__(self):
         self.db = PineconeClient()
 
+    from langfuse import observe
+    @observe()
     def retrieve(self, query: str, k: int = 5, intent: str = "unknown") -> list:
         results = self.db.search(query, k=k, intent=intent)
 

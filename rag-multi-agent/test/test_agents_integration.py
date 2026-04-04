@@ -8,10 +8,12 @@ from multiagent_rag.agents.finetuned_llm_agent import FinetunedLLMAgent
 from multiagent_rag.agents.confidence_agent import ConfidenceAgent
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
+from langfuse import observe
 
 load_dotenv()
 
 
+@observe(name="test_agents_integration")
 def test_integration():
     print("Initializing EmotionAgent...")
     emotion_agent = EmotionAgent()
@@ -28,6 +30,7 @@ def test_integration():
     print(f"Detected Emotion from text: {emotion_result}")
 
     emotion = emotion_result.get("emotion", "neutral")
+    emotion_confidence = emotion_result.get("confidence", 0.0)
 
     print("\n--- Testing Finetuned LLM Agent ---")
     context = "Internet outages in your area are currently being resolved and should be fixed in 2 hours."
@@ -41,6 +44,8 @@ def test_integration():
     confidence_result = confidence_agent.evaluate(query=text_query, response=response,
                                                   retrieved_chunks=retrieved_chunks, emotion=emotion)
     print(f"Confidence Evaluation: {confidence_result}")
+
+    confidence_score = confidence_result.get("confidence_score", 0.0)
 
 
 if __name__ == "__main__":

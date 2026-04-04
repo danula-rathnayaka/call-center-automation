@@ -33,6 +33,8 @@ class ConversationSummarizer:
 
         self.chain = self.prompt | self.llm | StrOutputParser()
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def summarize(
             self,
             history: List[BaseMessage],

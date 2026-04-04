@@ -37,6 +37,15 @@ class Generator:
         with open(os.path.join(_prompts_dir, "rag_prompt.txt"), "r", encoding="utf-8") as f:
             template_text = f.read()
 
+        from multiagent_rag.utils.telemetry import get_langfuse_client
+        client = get_langfuse_client()
+        if client:
+            try:
+                lf_prompt = client.get_prompt("rag_prompt", type="text", fallback=template_text)
+                template_text = lf_prompt.get_langchain_prompt()
+            except Exception as e:
+                logger.warning(f"Could not load rag_prompt from Langfuse: {e}")
+
         self.prompt = ChatPromptTemplate.from_messages([("system", template_text), ("placeholder", "{chat_history}"),
             ("human", "Context:\n{context}\n\nQuestion: {question}")])
         self.chain = self.prompt | self.llm | StrOutputParser()
@@ -46,6 +55,8 @@ class Generator:
     def _invoke_with_retry(self, payload: dict) -> str:
         return self.chain.invoke(payload)
 
+    from langfuse import observe
+    @observe(as_type="generation")
     def generate(self, query: str, context: str, history: List[BaseMessage], summary: Optional[str] = None, ) -> str:
         try:
             augmented_history = list(history)
