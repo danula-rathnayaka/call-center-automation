@@ -21,7 +21,7 @@ def report_metrics():
 
 def load_data():
     import os
-    dataset_path = os.path.join(os.path.dirname(__file__), "data", "Guardrail_Eval_Dataset.csv")
+    dataset_path = os.path.join(os.path.dirname(__file__), "testing_dataset", "Guardrail_Eval_Dataset.csv")
     with open(dataset_path, "r", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 

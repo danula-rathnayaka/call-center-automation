@@ -21,7 +21,7 @@ _ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".ogg", ".webm", ".flac", ".aiff", 
 _interaction_logger = InteractionLogger()
 
 _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_voice_upload_dir = os.path.join(_project_root, "data", "voice_uploads")
+_voice_upload_dir = os.path.join(_project_root, "testing_dataset", "voice_uploads")
 os.makedirs(_voice_upload_dir, exist_ok=True)
 
 
@@ -231,12 +231,12 @@ async def chat_stream(request: ChatRequest):
                 async for event in rag_app.astream_events(input_data, config=config, version="v2"):
                     event_name = event.get("event", "")
                     if event_name == "on_chat_model_stream":
-                        chunk = event.get("data", {}).get("chunk")
+                        chunk = event.get("testing_dataset", {}).get("chunk")
                         if chunk and hasattr(chunk, "content") and chunk.content:
                             payload = json.dumps({"type": "token", "content": chunk.content})
-                            yield f"data: {payload}\n\n"
+                            yield f"testing_dataset: {payload}\n\n"
                     elif event_name == "on_chain_end" and event.get("name") == "LangGraph":
-                        output = event.get("data", {}).get("output", {})
+                        output = event.get("testing_dataset", {}).get("output", {})
                         _write_scores(output)
                         final_payload = json.dumps({
                             "type": "done",
@@ -248,7 +248,7 @@ async def chat_stream(request: ChatRequest):
                             "handoff_uuid": output.get("handoff_uuid"),
                             "latency_ms": output.get("latency_ms", {}),
                         })
-                        yield f"data: {final_payload}\n\n"
+                        yield f"testing_dataset: {final_payload}\n\n"
                         flush()
             except asyncio.CancelledError:
                 logger.info(f"Stream cancelled for session {session_id}")
@@ -256,7 +256,7 @@ async def chat_stream(request: ChatRequest):
             except Exception as e:
                 logger.error(f"Streaming error: {str(e)}")
                 flush()
-                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+                yield f"testing_dataset: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(
         event_generator(),

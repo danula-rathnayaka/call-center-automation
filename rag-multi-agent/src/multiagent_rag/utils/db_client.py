@@ -232,6 +232,6 @@ class PineconeClient:
     def delete_all(self):
         try:
             self._index.delete(delete_all=True)
-            logger.info("Wiped all data from Pinecone index")
+            logger.info("Wiped all testing_dataset from Pinecone index")
         except Exception as e:
             logger.error(f"Failed to wipe Pinecone index: {e}")

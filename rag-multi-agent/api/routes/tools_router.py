@@ -85,7 +85,7 @@ async def register_tool(tool_req: ToolRegistrationRequest):
         "Returns every tool currently loaded from `registered_tools.json`. "
         "Each entry includes the tool name, description, API URL, and HTTP method. "
         "Use this in the admin panel to show which tools the AI agent has access to, "
-        "and as the data source for a tool management table where admins can review and delete tools."
+        "and as the testing_dataset source for a tool management table where admins can review and delete tools."
     ),
 )
 async def list_tools():

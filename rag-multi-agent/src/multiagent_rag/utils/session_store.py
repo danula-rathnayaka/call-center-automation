@@ -9,7 +9,7 @@ from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "sessions.db")
+_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "testing_dataset", "sessions.db")
 _lock = threading.Lock()
 
 
@@ -130,6 +130,6 @@ def delete_session(session_id: str):
                 conn.execute("DELETE FROM session_history WHERE session_id = ?", (session_id,))
                 conn.execute("DELETE FROM session_summary WHERE session_id = ?", (session_id,))
                 conn.commit()
-        logger.info(f"Session {session_id} data deleted from store")
+        logger.info(f"Session {session_id} testing_dataset deleted from store")
     except Exception as e:
         logger.error(f"Failed to delete session {session_id}: {e}")

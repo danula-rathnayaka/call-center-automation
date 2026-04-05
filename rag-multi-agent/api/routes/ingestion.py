@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/ingest", tags=["Ingestion"])
 
 _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_upload_dir = os.path.join(_project_root, "data", "uploads")
+_upload_dir = os.path.join(_project_root, "testing_dataset", "uploads")
 os.makedirs(_upload_dir, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}

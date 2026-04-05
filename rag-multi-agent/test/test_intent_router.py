@@ -19,7 +19,7 @@ def report_metrics():
 
 
 def load_data():
-    with open("data/IntentRouter_Eval_Dataset.csv", "r", encoding="utf-8") as f:
+    with open("testing_dataset/IntentRouter_Eval_Dataset.csv", "r", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 

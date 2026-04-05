@@ -12,7 +12,7 @@ from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "sessions.db")
+_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "testing_dataset", "sessions.db")
 _lock = threading.Lock()
 
 

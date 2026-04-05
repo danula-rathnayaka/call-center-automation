@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/knowledge", tags=["Knowledge Base"])
 
 _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_upload_dir = os.path.join(_project_root, "data", "uploads")
+_upload_dir = os.path.join(_project_root, "testing_dataset", "uploads")
 
 
 @router.get(

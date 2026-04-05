@@ -1,0 +1,101 @@
+query,history_context,expected_intent
+"My internet is not working and the LOS light is red.",,technical
+"How do I set the APN for my 4G connection?","Agent: Hello! How can I assist you today?",technical
+"The router keeps restarting every 10 minutes.",,technical
+"I am getting very slow speeds on my fiber line.",,technical
+"Can you guide me through the router configuration page?",,technical
+"My WiFi signal doesn't reach the upstairs room.",,technical
+"Is there a network outage in the Colombo 03 area?",,technical
+"I can't send SMS even though I have balance.","Customer: My balance is 500 LKR",technical
+"The ADSL light is blinking green but no internet.",,technical
+"How do I change the frequency from 2.4GHz to 5GHz?",,technical
+"What is the default admin password for the Huawei router?",,technical
+"My data connection keeps dropping to 2G.",,technical
+"I see a red light on my ONT box.",,technical
+"Internet speed is only 2Mbps on a 100Mbps plan.",,technical
+"How do I configure my bridge mode?","Agent: Welcome to tech support.",technical
+"I can't access certain websites but others work.",,technical
+"Port forwarding is not working on my device.",,technical
+"My upload speed is zero but download is fine.",,technical
+"The ethernet cable is plugged in but no connection.",,technical
+"Can you help me reset my fiber modem?",,technical
+"I want to check my outstanding bill amount.",,customer_service
+"How do I activate a new SIM card?",,customer_service
+"I want to change my current data plan to Unlimited.",,customer_service
+"Can you tell me my current data balance?","Customer: Hi I'm Janith",customer_service
+"When is the due date for my last month's bill?",,customer_service
+"I need to update my billing address.",,customer_service
+"How do I add an extra GB of data to my account?",,customer_service
+"My bill is higher than usual this month. Why?",,customer_service
+"Can I transfer credit to another number?",,customer_service
+"I want to deactivate my roaming service.",,customer_service
+"What are the charges for IDD calls to the UK?",,customer_service
+"How do I enable paperless billing?",,customer_service
+"I paid my bill but the line is still disconnected.","Customer: I just made the payment online.",customer_service
+"Are there any loyalty rewards for my account?",,customer_service
+"How do I register my NIC for this number?",,customer_service
+"I want to upgrade to a Postpaid connection.",,customer_service
+"What is the price of the new 5G router?",,customer_service
+"Can I change my ownership of the line?",,customer_service
+"How do I get a detailed call log statement?",,customer_service
+"I want to cancel my subscription.",,customer_service
+"Hello! How are you doing today?",,casual
+"Good morning bot.",,casual
+"Thank you so much for your help!","Agent: You are welcome! Have a great day.",casual
+"Tell me a joke to pass the time.",,casual
+"Are you a human or a robot?",,casual
+"Thanks! You're very helpful.",,casual
+"What's the weather like in Kandy?","Customer: Hi there",casual
+"Who created you?",,casual
+"Just saying hi!",,casual
+"I love your service!",,casual
+"Have a nice day.",,casual
+"Haha that was funny.",,casual
+"Are you powered by GPT?",,casual
+"Hey!",,casual
+"Nice to meet you bot.",,casual
+"You're doing a great job.",,casual
+"Goodbye!",,casual
+"Yo!","Agent: How can I help?",casual
+"Awesome, thanks.",,casual
+"Can you sing a song?",,casual
+"I want to speak to a human supervisor immediately!",,escalation
+"This is the fifth time I am calling and it is still not fixed!",,escalation
+"I am going to file a legal complaint with the TRC.","Agent: I apologize for the delay.",escalation
+"Your service is absolutely pathetic. Connect me to a manager.",,escalation
+"I've had enough of this bot. Put me through to a person.",,escalation
+"I will cancel all my lines if this isn't resolved now!",,escalation
+"You guys are stealing my money! This is a scam!",,escalation
+"Give me the number for your head office legal team.",,escalation
+"I have been waiting for 3 hours. This is unacceptable.",,escalation
+"I demand a refund for the last three months of bad service.",,escalation
+"Talk to a human.","Agent: I can help you with most tasks.",escalation
+"If you don't fix this by tonight, I'm going to the press.",,escalation
+"Useless bot. Transfer me to someone who knows what they're doing.",,escalation
+"I'm tired of these scripted answers. Human please!",,escalation
+"Your company is the worst in the country.",,escalation
+"I am recording this conversation for my lawyer.",,escalation
+"Escalate this ticket to the highest level.",,escalation
+"Nobody is helping me. I want a real person.",,escalation
+"Fix it now or I leave the network.","Agent: Please try to restart the device.",escalation
+"Shut up and let me talk to a human.",,escalation
+"It still doesn't work.","Agent: Did you try restarting the router?",technical
+"No, I haven't received it yet.","Agent: We sent the bill to your registered email.",customer_service
+"I did that already, but the red light is still there.","Agent: Please press the reset button for 10 seconds.",technical
+"Yes, please go ahead with the change.","Agent: Would you like to switch to the 40GB plan?",customer_service
+"It's too expensive.","Agent: Our new monthly plan is 4500 LKR.",customer_service
+"Wait, why is that?","Agent: Your account was charged for a value-added service.",customer_service
+"I already tried, it's the same.","Agent: Have you tried clearing your browser cache?",technical
+"Send it to my other email.","Agent: I can resend the invoice to you now.",customer_service
+"Actually, I'll talk to a person.","Agent: I can help you check your data balance.",escalation
+"That didn't fix the LOS light.","Agent: I have sent a refresh signal to your ONT.",technical
+"Can you do it now?","Agent: I can activate the roaming pack for you.",customer_service
+"That's not what I asked. Put me through to a person.","Agent: I am checking your signal levels.",escalation
+"Is it finally fixed?","Agent: Our engineers are working on the outage in your area.",technical
+"Why is it so slow today?","Agent: You have used 90% of your FUP limit.",technical
+"Okay, thanks anyway.","Agent: I cannot process that request at the moment.",casual
+"I am so frustrated with this!","Agent: I am an AI assistant. How can I help?",escalation
+"Can you check the 12-digit one?","Agent: The NIC you provided is invalid.",customer_service
+"But I already paid!","Agent: Your account shows an outstanding of 1200 LKR.",customer_service
+"It's still red.","Agent: Check if the fiber patch cord is bent.",technical
+"Just do it.","Agent: Would you like me to reset your connection profile?",technical

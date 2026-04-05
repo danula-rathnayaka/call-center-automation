@@ -17,7 +17,7 @@ def report_metrics():
 
 
 def load_data():
-    with open("data/Generator_Eval_Dataset.csv", "r", encoding="utf-8") as f:
+    with open("testing_dataset/Generator_Eval_Dataset.csv", "r", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 

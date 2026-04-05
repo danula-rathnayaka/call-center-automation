@@ -20,7 +20,7 @@ class ToolAgent:
                 "You are a highly capable Customer Service Action Bot. "
                 "You have access to a dynamic set of CRM tools to interact with company systems. "
                 "If you need more info to execute a tool (like a phone number or NIC), ASK the user directly. "
-                "Once the tool executes, summarize the returned data naturally and clearly for the customer.",
+                "Once the tool executes, summarize the returned testing_dataset naturally and clearly for the customer.",
             ),
             ("placeholder", "{chat_history}"),
             ("human", "{query}"),

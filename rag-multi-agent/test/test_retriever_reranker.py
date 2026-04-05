@@ -63,7 +63,7 @@ def reciprocal_rank(retrieved, target):
 
 
 def load_data():
-    path = "data/Retriever_Reranker_Eval_Dataset.csv"
+    path = "testing_dataset/Retriever_Reranker_Eval_Dataset.csv"
     with open(path, "r", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 

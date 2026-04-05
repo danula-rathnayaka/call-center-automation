@@ -27,7 +27,7 @@ _write_lock = threading.Lock()
         "Records a thumbs-up/thumbs-down/neutral rating for a specific AI response. "
         "Include the `session_id`, the exact `query` and `response` text, and a `rating` of `positive`, `negative`, or `neutral`. "
         "Optionally provide `correct_answer` (what the right answer should have been) and a `comment`. "
-        "This data is appended to a JSONL log file and can feed future model fine-tuning or quality reviews. "
+        "This testing_dataset is appended to a JSONL log file and can feed future model fine-tuning or quality reviews. "
         "Show a feedback widget (thumbs up/down) on each chat bubble and call this endpoint on interaction."
     ),
 )

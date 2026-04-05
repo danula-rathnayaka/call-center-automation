@@ -1,0 +1,41 @@
+query,chat_history,expected_tool,expected_parameters,ideal_agent_action
+"Can you check the balance for 0771234567?",,check_balance,"{""phone_number"": ""0771234567""}",Execute tool
+"I want to know my current balance.",,check_balance,MISSING,Ask user for phone number
+"Please verify this identity: 951234567V.",,verify_identity,"{""nic_number"": ""951234567V""}",Execute tool
+"Verify my NIC 199812345678 please.",,verify_identity,"{""nic_number"": ""199812345678""}",Execute tool
+"How do I reset my router?",,NONE,{},Respond normally
+"What is the balance of my account?","Customer: My number is 0718889999",check_balance,"{""phone_number"": ""0718889999""}",Execute tool
+"Here is the NIC: 851122334V. Can you verify it?","Agent: Please provide your NIC number.",verify_identity,"{""nic_number"": ""851122334V""}",Execute tool
+"Check balance for 0777111222.",,check_balance,"{""phone_number"": ""0777111222""}",Execute tool
+"Can you check my remaining data?","Agent: Sure, what is your phone number?",check_balance,MISSING,Ask user for phone number
+"My phone number is 0712233445. Now tell me the balance.","Agent: I can help with that.",check_balance,"{""phone_number"": ""0712233445""}",Execute tool
+"Is my identity verified?","Customer: My NIC is 200155667788",verify_identity,"{""nic_number"": ""200155667788""}",Execute tool
+"Verify identity.",,verify_identity,MISSING,Ask user for NIC number
+"Check balance.",,check_balance,MISSING,Ask user for phone number
+"What is 5G?","Customer: Hi there",NONE,{},Respond normally
+"Check balance for 0112345678.",,check_balance,"{""phone_number"": ""0112345678""}",Execute tool
+"Tell me my balance.","Customer: My number is 0773344556",check_balance,"{""phone_number"": ""0773344556""}",Execute tool
+"Validate this NIC 774433221V.",,verify_identity,"{""nic_number"": ""774433221V""}",Execute tool
+"Who is the owner of 198577889900?",,verify_identity,"{""nic_number"": ""198577889900""}",Execute tool
+"Can you help me pay my bill?",,NONE,{},Respond normally
+"Is there a signal outage in Colombo?",,NONE,{},Respond normally
+"My number is 0770001122. How much money is left on it?",,check_balance,"{""phone_number"": ""0770001122""}",Execute tool
+"Balance check please.",,check_balance,MISSING,Ask user for phone number
+"I have my NIC ready.","Agent: I need to verify you. Do you have your NIC?",verify_identity,MISSING,Ask user for NIC number
+"Check 0719998877.",,check_balance,"{""phone_number"": ""0719998877""}",Execute tool
+"Verify 921234567v.",,verify_identity,"{""nic_number"": ""921234567v""}",Execute tool
+"I am a new customer.",,NONE,{},Respond normally
+"How do I activate roaming?",,NONE,{},Respond normally
+"My NIC is 199011223344. Run verification.","Agent: Welcome Sunil.",verify_identity,"{""nic_number"": ""199011223344""}",Execute tool
+"Check balance for 0765544332.",,check_balance,"{""phone_number"": ""0765544332""}",Execute tool
+"Balance for my other number 0771112223.","Customer: My primary is 0771112222",check_balance,"{""phone_number"": ""0771112223""}",Execute tool
+"What's the status for NIC 880011223V?",,verify_identity,"{""nic_number"": ""880011223V""}",Execute tool
+"Verify this person.","Customer: NIC 200500112233",verify_identity,"{""nic_number"": ""200500112233""}",Execute tool
+"Check my phone credit.","Agent: What is the phone number?",check_balance,MISSING,Ask user for phone number
+"It is 0774455667. Check it.","Agent: What is your phone number?",check_balance,"{""phone_number"": ""0774455667""}",Execute tool
+"Can you explain fiber optics?",,NONE,{},Respond normally
+"Verify the owner of 751122334X.",,verify_identity,"{""nic_number"": ""751122334X""}",Execute tool
+"What's my balance?","Agent: I am your assistant.",check_balance,MISSING,Ask user for phone number
+"0714455667.","Agent: Please provide the phone number for the balance check.",check_balance,"{""phone_number"": ""0714455667""}",Execute tool
+"Verify NIC 198233445566.",,verify_identity,"{""nic_number"": ""198233445566""}",Execute tool
+"Hello, can you help me?","Agent: Yes, I can check balance or verify NIC.",NONE,{},Respond normally
