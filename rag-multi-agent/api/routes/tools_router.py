@@ -130,7 +130,6 @@ async def delete_tool(tool_name: str):
             _save_tools(filtered)
             logger.info(f"Tool '{tool_name}' deleted from registered_tools.json")
 
-        # Bust the in-memory cache in crm_tools so the ToolAgent reloads immediately
         try:
             from multiagent_rag.tools import crm_tools as _crm
             _crm._cache_mtime = 0.0
@@ -149,4 +148,3 @@ async def delete_tool(tool_name: str):
     except Exception as e:
         logger.error(f"Failed to delete tool '{tool_name}': {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete tool: {str(e)}")
-

@@ -18,11 +18,10 @@ def report_metrics():
     print(classification_report(tracker["y_true"], tracker["y_pred"], zero_division=0))
     print(confusion_matrix(tracker["y_true"], tracker["y_pred"]))
 
-    # Optionally, we can print out any specific mismatches
     print("Mismatches:")
     for (y_t, y_p) in zip(tracker["y_true"], tracker["y_pred"]):
         if y_t != y_p:
-            pass  # Keep output clean in summary
+            pass
 
 
 test_data = [{"query": "Verify my identity, mobile 0712345678 and NIC 987654321V", "chat_history": "",
@@ -168,9 +167,6 @@ def test_tool_agent(agent, row):
     tracker["y_true"].append(expected_tool)
     tracker["y_pred"].append(actual_tool)
 
-    # Let the test pass regardless of accuracy internally per-test, 
-    # to evaluate overall accuracy. But usually we want exact match for strictness.
-    # Allowing it to assert properly provides better per-item feedback.
     if expected_tool == "NONE":
         assert not hasattr(result, "tool_calls") or not result.tool_calls
     else:

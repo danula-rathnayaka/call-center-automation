@@ -31,15 +31,22 @@ class FinetunedLLMAgent:
             if finetuned_llm_dir not in sys.path:
                 sys.path.insert(0, finetuned_llm_dir)
 
-            import inference_pipeline as _pipeline
-            _pipeline.initialize()
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "finetuned_llm_internal", 
+                os.path.join(finetuned_llm_dir, "inference_pipeline.py")
+            )
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            module.initialize()
 
-            self._generate_fn = _pipeline.generate_response
-            logger.info("Fine-tuned LLM (HuggingFace Inference API) ready")
+            self._generate_fn = module.generate_response
+            logger.info("Fine-tuned LLM (HuggingFace Inference API) ready (isolated)")
             return True
 
         except Exception as e:
-            logger.warning(f"Fine-tuned LLM could not be loaded ({e}). Using Groq fallback.")
+            import traceback
+            logger.warning(f"Fine-tuned LLM could not be loaded: {e}\n{traceback.format_exc()}")
             return False
 
     def _get_fallback_generator(self):
@@ -61,7 +68,8 @@ class FinetunedLLMAgent:
             try:
                 return self._call_finetuned_llm(query, context, emotion)
             except Exception as e:
-                logger.error(f"Fine-tuned LLM generation failed, falling back to Groq: {e}")
+                import traceback
+                logger.error(f"Fine-tuned LLM generation failed, falling back to Groq: {e}\n{traceback.format_exc()}")
 
         return self._groq_fallback(query, context, emotion, history, summary)
 

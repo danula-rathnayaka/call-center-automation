@@ -26,6 +26,17 @@ def _get_connection() -> sqlite3.Connection:
 
 def _init_db():
     with _get_connection() as conn:
+        try:
+            cursor = conn.execute("PRAGMA table_info(human_handoff_queue)")
+            columns = cursor.fetchall()
+            if columns:
+                id_col = next((c for c in columns if c["name"] == "id"), None)
+                if id_col and id_col["type"].upper() == "INTEGER":
+                    logger.warning("Detected legacy INTEGER id schema. Recreating handoff table as TEXT.")
+                    conn.execute("DROP TABLE human_handoff_queue")
+        except Exception as e:
+            logger.error(f"Migration check failed: {e}")
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS human_handoff_queue (
                 id                   TEXT PRIMARY KEY,
