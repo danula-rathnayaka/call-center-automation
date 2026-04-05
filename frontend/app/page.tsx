@@ -263,6 +263,9 @@ export default function Home() {
         speak(
           "Hello! I'm Conservo AI, here to assist. How can i help you today?",
         );
+        setAgentTranscript(
+          "Hello! I'm Conservo AI, here to assist. How can i help you today?",
+        );
       }
     }
   };
