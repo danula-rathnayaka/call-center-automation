@@ -3,6 +3,7 @@ from typing import Dict, Any
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
+from langfuse import observe
 
 from multiagent_rag.utils.logger import get_logger
 from multiagent_rag.utils.prompt_manager import get_prompt
@@ -17,7 +18,6 @@ class Guardrail:
         self.prompt = PromptTemplate.from_template(template_text)
         self.chain = self.prompt | self.llm | StrOutputParser()
 
-    from langfuse import observe
     @observe()
     def validate(self, query: str) -> Dict[str, Any]:
         if not query or not query.strip():
@@ -29,7 +29,7 @@ class Guardrail:
         try:
             response = self.chain.invoke({"query": query}).strip().upper()
             if "UNSAFE" in response:
-                logger.warning(f"Guardrail blocked off-topic or unsafe query: {query[:80]}")
+                logger.warning(f"Guardrail blocked query: {query[:80]}")
                 return {
                     "safe": False,
                     "reason": "I can only assist with company-related inquiries, support requests, or our services. Could you please rephrase how I can help you regarding the company?",
@@ -40,7 +40,6 @@ class Guardrail:
 
         return {"safe": True, "reason": "", "block_type": None}
 
-    from langfuse import observe
     @observe()
     def sanitize_response(self, response: str) -> str:
         return response

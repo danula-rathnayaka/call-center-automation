@@ -4,6 +4,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
+from langfuse import observe
 
 from multiagent_rag.utils.logger import get_logger
 from multiagent_rag.utils.prompt_manager import get_prompt_template
@@ -22,7 +23,6 @@ class ConversationSummarizer:
         ])
         self.chain = self.prompt | self.llm | StrOutputParser()
 
-    from langfuse import observe
     @observe(as_type="generation")
     def summarize(
             self,

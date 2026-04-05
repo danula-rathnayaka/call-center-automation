@@ -5,6 +5,7 @@ from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
+from langfuse import observe
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from multiagent_rag.utils.logger import get_logger
@@ -45,7 +46,6 @@ class Generator:
     def _invoke_with_retry(self, payload: dict) -> str:
         return self.chain.invoke(payload)
 
-    from langfuse import observe
     @observe(as_type="generation")
     def generate(self, query: str, context: str, history: List[BaseMessage], summary: Optional[str] = None) -> str:
         try:

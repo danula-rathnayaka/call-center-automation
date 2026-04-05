@@ -1,6 +1,7 @@
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
+from langfuse import observe
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from multiagent_rag.utils.logger import get_logger
@@ -24,7 +25,6 @@ class QueryDecomposer:
     def _invoke_with_retry(self, query: str) -> str:
         return self.chain.invoke({"query": query})
 
-    from langfuse import observe
     @observe(as_type="generation")
     def decompose(self, query: str) -> list:
         try:

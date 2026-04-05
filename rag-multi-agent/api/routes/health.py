@@ -79,10 +79,34 @@ async def health_check():
         components.append(ComponentStatus(name="Fine-tuned LLM", status="unhealthy", details=str(e)))
 
     try:
-        from multiagent_rag.graph.rag_workflow import rag_app
-        components.append(ComponentStatus(name="RAG Workflow", status="healthy", details="LangGraph workflow compiled"))
+        from multiagent_rag.utils.telemetry import get_langfuse_client
+        lf_client = get_langfuse_client()
+        if lf_client:
+            lf_client.auth_check()
+            components.append(ComponentStatus(name="Langfuse", status="healthy", details="Connected and authenticated"))
+        else:
+            components.append(ComponentStatus(name="Langfuse", status="degraded", details="Client not initialized - check LANGFUSE_* env vars"))
     except Exception as e:
-        components.append(ComponentStatus(name="RAG Workflow", status="unhealthy", details=str(e)))
-        overall_healthy = False
+        components.append(ComponentStatus(name="Langfuse", status="unhealthy", details=str(e)))
 
-    return HealthResponse(status="healthy" if overall_healthy else "degraded", components=components, )
+    return HealthResponse(status="healthy" if overall_healthy else "degraded", components=components)
+
+
+@router.post(
+    "/prompts/reload",
+    summary="Hot-reload all prompts from Langfuse",
+    description=(
+        "Clears the in-process prompt cache. The next request to each agent will re-fetch the latest "
+        "published version of its prompt from Langfuse without needing a server restart. "
+        "Call this from the admin panel after publishing a new prompt version in the Langfuse UI."
+    ),
+)
+async def reload_prompts():
+    try:
+        from multiagent_rag.utils.prompt_manager import invalidate_cache
+        invalidate_cache()
+        logger.info("Prompt cache invalidated via API")
+        return {"status": "ok", "message": "Prompt cache cleared. Agents will fetch latest versions from Langfuse on next request."}
+    except Exception as e:
+        logger.error(f"Failed to reload prompts: {e}")
+        return {"status": "error", "message": str(e)}

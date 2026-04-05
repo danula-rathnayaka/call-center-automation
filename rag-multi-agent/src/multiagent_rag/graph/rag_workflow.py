@@ -1,6 +1,8 @@
 import concurrent.futures
 import time
 
+from langfuse import observe, get_client
+
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.graph import StateGraph, END
 
@@ -77,6 +79,7 @@ def stt_node(state: RAGState):
     return {"latency_ms": {"stt": elapsed}}
 
 
+@observe(name="emotion_detection")
 def emotion_node(state: RAGState):
     start = time.time()
     audio_path = state.get("audio_path", "")
@@ -88,6 +91,20 @@ def emotion_node(state: RAGState):
         emotion_result = _emotion_agent.detect_from_text(query)
 
     elapsed = round((time.time() - start) * 1000)
+
+    try:
+        lf = get_client()
+        if lf:
+            lf.update_current_observation(
+                name="emotion_detection",
+                model="emotion-model-v2",
+                input={"text": query, "has_audio": bool(audio_path)},
+                output=emotion_result,
+                metadata={"latency_ms": elapsed, "source": "audio" if audio_path else "text"},
+            )
+    except Exception:
+        pass
+
     return {"emotion": emotion_result.get("emotion", "neutral"),
         "emotion_confidence": emotion_result.get("confidence", 0.0), "latency_ms": {"emotion_detection": elapsed}, }
 
@@ -312,11 +329,27 @@ def dynamic_tools_node(state: RAGState):
     return {"chat_history": new_messages, "latency_ms": {"tools": elapsed}}
 
 
+@observe(name="confidence_evaluation")
 def confidence_evaluator_node(state: RAGState):
     start = time.time()
     result = _confidence_agent.evaluate(state.get("query", ""), state.get("final_answer", ""),
         state.get("retrieved_docs", []), state.get("emotion", "neutral"), )
     elapsed = round((time.time() - start) * 1000)
+
+    try:
+        lf = get_client()
+        if lf:
+            lf.update_current_observation(
+                name="confidence_evaluation",
+                model="confidence-model-xgboost",
+                input={"query": state.get("query", ""), "emotion": state.get("emotion", "neutral"),
+                       "retrieved_docs_count": len(state.get("retrieved_docs", []))},
+                output=result,
+                metadata={"latency_ms": elapsed, "should_escalate": result.get("should_escalate", False)},
+            )
+    except Exception:
+        pass
+
     return {"response_confidence": result.get("confidence_score", 0.5),
         "should_escalate": result.get("should_escalate", False), "latency_ms": {"confidence_evaluator": elapsed}, }
 
