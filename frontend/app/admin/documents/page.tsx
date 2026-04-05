@@ -1,0 +1,282 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useRef, useState, useEffect } from "react";
+import { useNotification } from "@/app/components/notifications/NotificationProvider";
+
+type DocumentItem = {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+};
+
+type UploadingItem = {
+  id: string;
+  name: string;
+  size: number;
+};
+
+export default function DocumentsPage() {
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { notify } = useNotification();
+
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+
+  const [uploadingItems, setUploadingItems] = useState<UploadingItem[]>([]);
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const res = await fetch(
+          "http://localhost:8000/api/knowledge/documents",
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch documents");
+        }
+
+        const data = await res.json();
+
+        const formatted: DocumentItem[] = data.documents.map(
+          (doc: any, index: number) => ({
+            id: `${index}-${doc.document_hash || doc.source}`,
+            name: doc.source,
+            size: 0,
+            type: doc.type,
+          }),
+        );
+
+        setDocuments(formatted);
+      } catch (err) {
+        notify({
+          title: "Error",
+          message: "Failed to load documents from server.",
+          type: "error",
+        });
+      }
+    };
+
+    fetchDocuments();
+  }, []);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return;
+
+    Array.from(files).forEach(async (file) => {
+      const tempId = crypto.randomUUID();
+
+      setUploadingItems((prev) => [
+        { id: tempId, name: file.name, size: file.size },
+        ...prev,
+      ]);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("http://127.0.0.1:8000/api/ingest/file", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          notify({
+            title: "Upload Failed",
+            message: err.detail || `Could not upload "${file.name}".`,
+            type: "error",
+          });
+          return;
+        }
+
+        setDocuments((prev) => [
+          {
+            id: tempId,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          },
+          ...prev,
+        ]);
+
+        notify({
+          title: "Document Uploaded",
+          message: `"${file.name}" was successfully ingested.`,
+          type: "success",
+        });
+      } catch (e) {
+        notify({
+          title: "Network Error",
+          message: `Could not reach the server while uploading "${file.name}".`,
+          type: "error",
+        });
+      } finally {
+        setUploadingItems((prev) => prev.filter((u) => u.id !== tempId));
+      }
+    });
+  };
+
+  const handleDelete = async (id: string, source: string) => {
+    const res = await fetch(
+      `http://localhost:8000/api/knowledge/documents/${source}`,
+      {
+        method: "DELETE",
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json();
+      notify({
+        title: "Deletation Failed",
+        message: err.detail || `Could not delete "${source}".`,
+        type: "error",
+      });
+      return;
+    }
+    const doc = documents.find((d) => d.id === id);
+    setDocuments((prev) => prev.filter((doc) => doc.id !== id));
+    notify({
+      title: "Document Removed",
+      message: `"${doc?.name || "Document"}" has been deleted.`,
+      type: "info",
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen bg-neutral-50 text-neutral-800">
+      <main className="flex-1 p-10 border-x border-neutral-200">
+        {/* Page Title */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="p-2 bg-neutral-100 hover:bg-neutral-200 transition rounded-full cursor-pointer"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="24px"
+              viewBox="0 -960 960 960"
+              width="24px"
+              fill="#000000"
+            >
+              <path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold">Document Management</h1>
+            <p className="text-sm text-neutral-500 mt-1">
+              Upload and manage knowledge base documents for the automation
+              system.
+            </p>
+          </div>
+        </div>
+
+        {/* Upload Box */}
+        <div
+          onClick={handleUploadClick}
+          className="mt-8 border-2 border-dashed border-neutral-300 rounded-xl p-12 text-center bg-white cursor-pointer hover:border-black transition"
+        >
+          <p className="font-medium">
+            Click to upload or drag & drop documents
+          </p>
+          <p className="text-xs text-neutral-400 mt-2">
+            PDF, DOCX, TXT, CSV supported
+          </p>
+          <input
+            type="file"
+            multiple
+            ref={fileInputRef}
+            onChange={(e) => handleFiles(e.target.files)}
+            className="hidden"
+          />
+        </div>
+
+        {/* Document Table */}
+        <div className="mt-10 bg-white rounded-xl border border-neutral-200 overflow-hidden">
+          {documents.length === 0 && uploadingItems.length === 0 ? (
+            <div className="p-12 text-center text-neutral-500">
+              No documents available.
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-100 text-neutral-600">
+                <tr>
+                  <th className="text-left px-6 py-4">File Name</th>
+                  <th className="text-left px-6 py-4">Size</th>
+                  <th className="text-left px-6 py-4">Type</th>
+                  <th className="text-left px-6 py-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Uploading rows with loader */}
+                {uploadingItems.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-t border-neutral-200 bg-blue-50"
+                  >
+                    <td className="px-6 py-4 font-medium flex items-center gap-3">
+                      <svg
+                        className="animate-spin h-4 w-4 text-blue-500 shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                      </svg>
+                      <span className="text-blue-700">{item.name}</span>
+                    </td>
+                    <td className="px-6 py-4 text-neutral-500">
+                      {(item.size / 1024).toFixed(1)} KB
+                    </td>
+                    <td className="px-6 py-4 text-blue-500 italic">
+                      Processing...
+                    </td>
+                    <td className="px-6 py-4 text-right text-neutral-400">—</td>
+                  </tr>
+                ))}
+
+                {/* Completed document rows */}
+                {documents.map((doc) => (
+                  <tr
+                    key={doc.id}
+                    className="border-t border-neutral-200 hover:bg-neutral-50 transition"
+                  >
+                    <td className="px-6 py-4 font-medium">{doc.name}</td>
+                    <td className="px-6 py-4 text-neutral-600">
+                      {(doc.size / 1024).toFixed(1)} KB
+                    </td>
+                    <td className="px-6 py-4 text-neutral-600">{doc.type}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleDelete(doc.id, doc.name)}
+                        className="text-red-600 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
