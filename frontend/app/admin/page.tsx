@@ -25,6 +25,13 @@ export default function AdminPage() {
     }
   };
 
+  useEffect(() => {
+    fetchQueue();
+
+    const interval = setInterval(fetchQueue, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const today = useMemo(() => {
     return new Date().toLocaleDateString("en-US", {
       weekday: "long",

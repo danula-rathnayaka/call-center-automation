@@ -119,23 +119,6 @@ export default function ToolsPage() {
     );
   };
 
-  const handleEdit = (id: string) => {
-    setApis((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...a, editing: true, saved: false } : a,
-      ),
-    );
-  };
-
-  const handleCancelEdit = (id: string, snapshot: ApiItem) => {
-    setApis((prev) =>
-      prev.map((a) =>
-        a.id === id ? { ...snapshot, saved: true, editing: false } : a,
-      ),
-    );
-    setExpandedId(null);
-  };
-
   const handleAddParam = (id: string) => {
     setApis((prev) =>
       prev.map((a) =>
@@ -475,12 +458,6 @@ export default function ToolsPage() {
                           {api.saved && !api.editing && (
                             <>
                               <button
-                                onClick={() => handleEdit(api.id)}
-                                className="text-amber-600 hover:underline"
-                              >
-                                Edit
-                              </button>
-                              <button
                                 onClick={() =>
                                   handleDelete(api.id, api.toolName)
                                 }
@@ -490,24 +467,7 @@ export default function ToolsPage() {
                               </button>
                             </>
                           )}
-                          {api.editing && (
-                            <>
-                              <button
-                                onClick={() => handleSave(api.id, snapshot)}
-                                className="text-blue-600 hover:underline"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleCancelEdit(api.id, snapshot)
-                                }
-                                className="text-neutral-500 hover:underline"
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          )}
+
                           {!api.saved && !api.editing && (
                             <>
                               <button

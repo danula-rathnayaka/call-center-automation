@@ -64,6 +64,18 @@ export default function AdminCalls() {
     }
   };
 
+  const handleAnswerCall = async (id: string) => {
+    try {
+      await fetch(`http://localhost:8000/api/handoff/${id}/answer`, {
+        method: "POST",
+      });
+
+      fetchQueue();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const formatDuration = (start: string, end: string) => {
     if (!start || !end) return "—";
 
@@ -117,35 +129,35 @@ export default function AdminCalls() {
         <div className="mt-3">
           <h2 className="text-lg font-semibold mb-6">Priority Calls</h2>
 
-          <div className="flex gap-4">
-            {priorityCalls.map((call) => (
-              <div
-                key={call.id}
-                className="w-full rounded-xl bg-red-100 py-4 px-4 flex justify-between items-center"
-              >
-                <div>{call.phone_number}</div>
-                <button
-                  onClick={() =>
-                    notify({
-                      title: "Escalation Alert",
-                      message: call.escalation_reason || call.query,
-                      type: "info",
-                    })
-                  }
-                  className="w-10 h-10 bg-green-700 flex items-center justify-center rounded-full cursor-pointer"
+          <div className="flex  flex-col gap-4 w-full">
+            {priorityCalls.length > 0 ? (
+              priorityCalls.map((call) => (
+                <div
+                  key={call.id}
+                  className="w-full rounded-xl bg-red-100 py-4 px-4 flex justify-between items-center"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    height="24px"
-                    viewBox="0 -960 960 960"
-                    width="24px"
-                    fill="#FFFFFF"
+                  <div>{call.phone_number}</div>
+                  <button
+                    onClick={() => handleAnswerCall(call.id)}
+                    className="w-10 h-10 bg-green-700 flex items-center justify-center rounded-full cursor-pointer"
                   >
-                    <path d="M798-120q-125 0-247-54.5T329-329Q229-429 174.5-551T120-798q0-18 12-30t30-12h162q14 0 25 9.5t13 22.5l26 140q2 16-1 27t-11 19l-97 98q20 37 47.5 71.5T387-386q31 31 65 57.5t72 48.5l94-94q9-9 23.5-13.5T670-390l138 28q14 4 23 14.5t9 23.5v162q0 18-12 30t-30 12Z" />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="24px"
+                      viewBox="0 -960 960 960"
+                      width="24px"
+                      fill="#FFFFFF"
+                    >
+                      <path d="M798-120q-125 0-247-54.5T329-329Q229-429 174.5-551T120-798q0-18 12-30t30-12h162q14 0 25 9.5t13 22.5l26 140q2 16-1 27t-11 19l-97 98q20 37 47.5 71.5T387-386q31 31 65 57.5t72 48.5l94-94q9-9 23.5-13.5T670-390l138 28q14 4 23 14.5t9 23.5v162q0 18-12 30t-30 12Z" />
+                    </svg>
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="w-full text-center py-8 text-neutral-400 bg-red-50 rounded-xl">
+                No priority calls right now
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -153,31 +165,36 @@ export default function AdminCalls() {
         <div className="mt-6">
           <h2 className="text-lg font-semibold mb-6">Answered Calls</h2>
 
-          <div className="flex gap-4">
-            {answeredCalls.map((call) => (
-              <div
-                key={call.id}
-                className="w-full rounded-xl bg-green-100 py-4 px-4 flex justify-between items-center"
-              >
-                <div>{call.phone_number}</div>
-
-                <button
-                  onClick={() => handleCloseCall(call.id)}
-                  className="w-10 h-10 bg-red-600 flex items-center justify-center rounded-full cursor-pointer"
+          <div className="flex flex-col gap-4 w-full">
+            {answeredCalls.length > 0 ? (
+              answeredCalls.map((call) => (
+                <div
+                  key={call.id}
+                  className="w-full rounded-xl bg-green-100 py-4 px-4 flex justify-between items-center"
                 >
-                  {/* Close Icon */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    height="20px"
-                    viewBox="0 -960 960 960"
-                    width="20px"
-                    fill="#FFFFFF"
+                  <div>{call.phone_number}</div>
+
+                  <button
+                    onClick={() => handleCloseCall(call.id)}
+                    className="w-10 h-10 bg-red-600 flex items-center justify-center rounded-full cursor-pointer"
                   >
-                    <path d="M256-200 200-256l224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="20px"
+                      viewBox="0 -960 960 960"
+                      width="20px"
+                      fill="#FFFFFF"
+                    >
+                      <path d="M256-200 200-256l224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
+                    </svg>
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="w-full text-center py-8 text-neutral-400 bg-green-50 rounded-xl">
+                No active answered calls
               </div>
-            ))}
+            )}
           </div>
         </div>
 

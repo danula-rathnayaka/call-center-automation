@@ -23,6 +23,7 @@ export default function Home() {
   const [isNumberDialogOpen, setNumberDialogOpen] = useState(false);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
 
   // Audio analysis refs
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -86,7 +87,7 @@ export default function Home() {
     formData.append("session_id", "123123");
 
     const res = await fetch(
-      `http://127.0.0.1:8000/api/chat/voice?session_id=${sessionId}`,
+      `http://127.0.0.1:8000/api/chat/voice?session_id=${sessionId}&phone_number=${phoneNumber}`,
       {
         method: "POST",
         body: formData,
@@ -122,6 +123,8 @@ export default function Home() {
 
   // mic click starts/stops MediaRecorder
   const handleMicClick = async () => {
+    speechSynthesis.cancel();
+    setIsAgentSpeaking(false);
     if (isListening) {
       // Stop recording
       if (mediaRecorderRef.current) {
@@ -220,6 +223,8 @@ export default function Home() {
   };
 
   const handleHangOn = async (data: boolean) => {
+    speechSynthesis.cancel();
+    setIsAgentSpeaking(false);
     const res = await fetch(
       `http://127.0.0.1:8000/api/session/end/${sessionId}`,
       {
@@ -231,6 +236,7 @@ export default function Home() {
 
     if (resData.session_id == sessionId) {
       setSessionId("");
+      setPhoneNumber("");
       setActiveCall(data);
       sessionStorage.removeItem("phone_no");
     }
@@ -240,7 +246,7 @@ export default function Home() {
     if (phone.length === 10) {
       const num: number = Math.floor(100000 + Math.random() * 900000);
       const res = await fetch(
-        `http://127.0.0.1:8000/api/session/start?session_id=${num}`,
+        `http://127.0.0.1:8000/api/session/start?session_id=${num}&phone_number=${phone}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -251,8 +257,12 @@ export default function Home() {
 
       if (data.session_id == num) {
         setSessionId(data.session_id);
+        setPhoneNumber(phone);
         sessionStorage.setItem("phone_no", phone);
         handleActiveCall();
+        speak(
+          "Hello! I'm Conservo AI, here to assist. How can i help you today?",
+        );
       }
     }
   };

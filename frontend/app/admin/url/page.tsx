@@ -104,22 +104,6 @@ export default function UrlPage() {
     );
   };
 
-  const handleEdit = (id: string) => {
-    setUrls((prev) =>
-      prev.map((u) =>
-        u.id === id ? { ...u, editing: true, saved: false } : u,
-      ),
-    );
-  };
-
-  const handleCancelEdit = (id: string, snapshot: UrlItem) => {
-    setUrls((prev) =>
-      prev.map((u) =>
-        u.id === id ? { ...snapshot, saved: true, editing: false } : u,
-      ),
-    );
-  };
-
   const handleSave = async (id: string, snapshot?: UrlItem) => {
     const item = urls.find((u) => u.id === id);
     if (!item) return;
@@ -316,12 +300,6 @@ export default function UrlPage() {
                         {item.saved && !item.editing && (
                           <>
                             <button
-                              onClick={() => handleEdit(item.id)}
-                              className="text-amber-600 hover:underline"
-                            >
-                              Edit
-                            </button>
-                            <button
                               onClick={() => handleDelete(item.id, item.url)}
                               className="text-red-600 hover:underline"
                             >
@@ -329,24 +307,7 @@ export default function UrlPage() {
                             </button>
                           </>
                         )}
-                        {item.editing && (
-                          <>
-                            <button
-                              onClick={() => handleSave(item.id, snapshot)}
-                              className="text-blue-600 hover:underline"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleCancelEdit(item.id, snapshot)
-                              }
-                              className="text-neutral-500 hover:underline"
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        )}
+
                         {!item.saved && !item.editing && (
                           <>
                             <button
