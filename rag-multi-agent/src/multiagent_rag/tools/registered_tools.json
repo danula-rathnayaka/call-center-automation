@@ -1,0 +1,43 @@
+[
+    {
+        "tool_name": "verify_customer_identity",
+        "description": "Verifies a customer's identity using their Mobile Number and National ID (NIC). Use this before performing sensitive actions or accessing private account details.",
+        "api_url": "http://localhost:3000/api/v1/customers/verify",
+        "http_method": "POST",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "mobile_number": {
+                    "type": "string",
+                    "description": "The 10-digit mobile number."
+                },
+                "national_id": {
+                    "type": "string",
+                    "description": "The user's National Identity Card (NIC) number."
+                }
+            },
+            "required": [
+                "mobile_number",
+                "national_id"
+            ]
+        }
+    },
+    {
+        "tool_name": "check_account_balance",
+        "description": "Retrieves the customer's data balance, voice balance, account status, and billing type using their mobile number. Use this when a user asks about their remaining data, minutes, or account status.",
+        "api_url": "http://localhost:3000/api/v1/customers/balance",
+        "http_method": "POST",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "mobile_number": {
+                    "type": "string",
+                    "description": "The 10-digit mobile number. ASK the user directly if missing."
+                }
+            },
+            "required": [
+                "mobile_number"
+            ]
+        }
+    }
+]

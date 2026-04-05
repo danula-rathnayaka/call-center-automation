@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Multi-Agent-RAG"
+version = "0.1.0"
+description = "Multi-Agent RAG System for Telecom"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "beautifulsoup4>=4.12.0",
+    "easyocr>=1.7.2",
+    "edge-tts>=7.2.7",
+    "fastapi>=0.115.0",
+    "jupyter>=1.1.1",
+    "langchain>=0.3.0",
+    "langchain-experimental>=0.3.0",
+    "langchain-groq>=0.2.0",
+    "langchain-huggingface>=0.1.0",
+    "langchain-text-splitters>=0.3.0",
+    "langgraph>=0.2.0",
+    "langgraph-checkpoint>=2.0.0",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "pdf2image>=1.17.0",
+    "pinecone>=5.0.0",
+    "pinecone-text>=0.9.0",
+    "pydantic>=2.0.0",
+    "pydub>=0.25.1",
+    "pyaudio>=0.2.14",
+    "pygame>=2.6.1",
+    "python-docx>=1.1.0",
+    "python-dotenv>=1.0.0",
+    "python-multipart>=0.0.9",
+    "requests>=2.31.0",
+    "sentence-transformers>=3.0.0",
+    "speechrecognition>=3.10.0",
+    "streamlit>=1.38.0",
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "torchvision>=0.15.0",
+    "uvicorn[standard]>=0.30.0",
+    "peft>=0.18.1",
+    "xgboost>=3.2.0",
+    "pytest>=9.0.2",
+    "pandas>=2.3.3",
+    "crawl4ai>=0.8.5",
+    "tenacity>=9.1.2",
+    "tensorflow>=2.21.0",
+    "tf-keras>=2.21.0",
+    "librosa>=0.11.0",
+    "bitsandbytes-windows>=0.37.5",
+    "huggingface-hub[hf-xet]>=0.36.0",
+    "hf-xet>=1.2.0",
+    "langfuse>=4.0.6",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
