@@ -51,5 +51,5 @@ class ConfidentModel:
  
 
 
-cm = ConfidentModel()
-print(cm.predict_confident_level("Um, maybe we could try that, I guess?"))
+# cm = ConfidentModel()
+# print(cm.predict_confident_level("Um, maybe we could try that, I guess?"))

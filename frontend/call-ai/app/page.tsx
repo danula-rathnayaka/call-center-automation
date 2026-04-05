@@ -125,7 +125,7 @@ export default function Home() {
     if (isListening) {
       // Stop recording
       if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop(); // triggers onstop → encodes real WAV
+        mediaRecorderRef.current.stop(); // triggers onstop →encodes real WAV
       }
       streamRef.current?.getTracks().forEach((track) => track.stop());
       stopAudioAnalysis();
