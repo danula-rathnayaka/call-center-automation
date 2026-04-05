@@ -24,6 +24,13 @@ def _get_connection() -> sqlite3.Connection:
 def _init_db():
     with _get_connection() as conn:
         conn.execute("""
+            CREATE TABLE IF NOT EXISTS sessions (
+                session_id   TEXT PRIMARY KEY,
+                phone_number TEXT,
+                created_at   TEXT NOT NULL
+            )
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS session_history (
                 session_id  TEXT NOT NULL,
                 turn_index  INTEGER NOT NULL,
@@ -43,6 +50,34 @@ def _init_db():
 
 
 _init_db()
+
+
+def create_session(session_id: str, phone_number: Optional[str] = None):
+    try:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        with _lock:
+            with _get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO sessions (session_id, phone_number, created_at) VALUES (?, ?, ?)"
+                    "ON CONFLICT(session_id) DO UPDATE SET phone_number=excluded.phone_number",
+                    (session_id, phone_number, now),
+                )
+                conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to create session {session_id}: {e}")
+
+
+def get_phone_number(session_id: str) -> Optional[str]:
+    try:
+        with _get_connection() as conn:
+            row = conn.execute(
+                "SELECT phone_number FROM sessions WHERE session_id = ?", (session_id,)
+            ).fetchone()
+        return row["phone_number"] if row else None
+    except Exception as e:
+        logger.error(f"Failed to get phone number for session {session_id}: {e}")
+        return None
 
 
 def _serialize_message(msg: BaseMessage) -> dict:
@@ -127,6 +162,7 @@ def delete_session(session_id: str):
     try:
         with _lock:
             with _get_connection() as conn:
+                conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
                 conn.execute("DELETE FROM session_history WHERE session_id = ?", (session_id,))
                 conn.execute("DELETE FROM session_summary WHERE session_id = ?", (session_id,))
                 conn.commit()

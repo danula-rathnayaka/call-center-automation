@@ -13,6 +13,7 @@ from multiagent_rag.graph.rag_workflow import rag_app
 from multiagent_rag.utils.interaction_logger import InteractionLogger
 from multiagent_rag.utils.logger import get_logger
 from multiagent_rag.utils.telemetry import get_langchain_handler, flush
+from multiagent_rag.utils.session_store import get_phone_number
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
@@ -94,12 +95,13 @@ def _write_scores(result: dict):
 @observe(name="chat_text")
 async def chat(request: ChatRequest):
     session_id = request.session_id or str(uuid.uuid4())
+    phone_number = request.phone_number or get_phone_number(session_id)
 
     with propagate_attributes(
         session_id=session_id,
-        user_id=request.phone_number or session_id,
+        user_id=phone_number or session_id,
         tags=["rag", "channel:text"],
-        metadata={"session_id": session_id, "phone_number": request.phone_number or ""},
+        metadata={"session_id": session_id, "phone_number": phone_number or ""},
     ):
         lf_handler = get_langchain_handler()
         callbacks = [lf_handler] if lf_handler else []
@@ -112,7 +114,7 @@ async def chat(request: ChatRequest):
         try:
             result = rag_app.invoke(
                 {"query": request.query, "audio_path": "", "session_id": session_id,
-                 "phone_number": request.phone_number},
+                 "phone_number": phone_number},
                 config=config,
             )
             _write_scores(result)
@@ -141,6 +143,7 @@ async def chat(request: ChatRequest):
 @observe(name="chat_voice")
 async def chat_voice(audio: UploadFile = File(...), session_id: str = None, phone_number: str = None):
     session_id = session_id or str(uuid.uuid4())
+    phone_number = phone_number or get_phone_number(session_id)
 
     filename = audio.filename or f"voice_{uuid.uuid4()}.wav"
     ext = os.path.splitext(filename)[1].lower()
@@ -211,11 +214,12 @@ async def chat_voice(audio: UploadFile = File(...), session_id: str = None, phon
 @observe(name="chat_stream")
 async def chat_stream(request: ChatRequest):
     session_id = request.session_id or str(uuid.uuid4())
+    phone_number = request.phone_number or get_phone_number(session_id)
 
     async def event_generator():
         with propagate_attributes(
             session_id=session_id,
-            user_id=request.phone_number or session_id,
+            user_id=phone_number or session_id,
             tags=["rag", "channel:stream"],
         ):
             lf_handler = get_langchain_handler()
@@ -226,7 +230,7 @@ async def chat_stream(request: ChatRequest):
                 "run_name": f"rag_pipeline_stream:{session_id[:8]}",
             }
             input_data = {"query": request.query, "audio_path": "", "session_id": session_id,
-                          "phone_number": request.phone_number}
+                          "phone_number": phone_number}
             try:
                 async for event in rag_app.astream_events(input_data, config=config, version="v2"):
                     event_name = event.get("event", "")

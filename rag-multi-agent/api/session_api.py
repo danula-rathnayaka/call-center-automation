@@ -13,6 +13,7 @@ router = APIRouter(prefix="/api/session", tags=["Session"])
 
 class SessionStartResponse(BaseModel):
     session_id: str
+    phone_number: Optional[str] = None
     message: str
 
 
@@ -24,11 +25,18 @@ class SessionEndResponse(BaseModel):
 
 
 @router.post("/start", response_model=SessionStartResponse)
-async def start_session(session_id: Optional[str] = None):
+async def start_session(session_id: Optional[str] = None, phone_number: Optional[str] = None):
     sid = session_id or str(uuid.uuid4())
-    logger.info(f"Session started: {sid}")
-    return SessionStartResponse(session_id=sid,
-        message="Session initialized. Use this session_id in all subsequent requests.", )
+    
+    from multiagent_rag.utils.session_store import create_session
+    create_session(sid, phone_number)
+    
+    logger.info(f"Session started: {sid} (phone: {phone_number})")
+    return SessionStartResponse(
+        session_id=sid,
+        phone_number=phone_number,
+        message="Session initialized. Phone number linked to this session.",
+    )
 
 
 @router.post("/end/{session_id}", response_model=SessionEndResponse)
