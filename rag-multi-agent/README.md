@@ -117,7 +117,7 @@ uv sync
 ### 8.2 Launch the Backend API
 Start the FastAPI server from the root directory:
 ```bash
-uv run python api/main.py
+uv run uvicorn api.main:app
 ```
 
 ### 8.3 Interactive API Documentation
