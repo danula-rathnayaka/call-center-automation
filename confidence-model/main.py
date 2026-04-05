@@ -1,13 +1,15 @@
-from features.confidence_feature_extractor import ConfidenceFeatureExtractor
-from sentence_transformers import SentenceTransformer
+import pickle
+import re
 
 import numpy as np
+from sentence_transformers import SentenceTransformer
 from xgboost import XGBClassifier
-import re
-import pickle
+
+from features.confidence_feature_extractor import ConfidenceFeatureExtractor
+
 
 class ConfidentModel:
-    def __init__(self):
+    def _init_(self):
         self.confidentExtractor = ConfidenceFeatureExtractor()
         self.embedder = SentenceTransformer("all-MiniLM-L6-v2")
         self.model = XGBClassifier()
@@ -17,13 +19,10 @@ class ConfidentModel:
         with open("model/scaler.pkl", "rb") as f:
             self.scaler = pickle.load(f)
 
-    
-
     def clean_text(self, text):
         text = str(text).lower().strip()
         text = re.sub(r"\s+", " ", text)
         return text
-
 
     def predict_confident_level(self, text: str):
         """Predict confidence level for a given text."""
@@ -40,15 +39,10 @@ class ConfidentModel:
         X_input = np.hstack([emb, ling_vec_scaled])
 
         # Predict
-        prob = self.model.predict_proba(X_input)[0][1]
+        prob = self.model.predict_proba(X_input)[0][0]
         label = "high" if prob >= self.threshold else "low"
 
-        return {
-            "confidence_label": label,
-            "confidence_score": float(prob),
-            "linguistic_features": ling
-        }
- 
+        return {"confidence_label": label, "confidence_score": float(prob), "linguistic_features": ling}
 
 
 # cm = ConfidentModel()
