@@ -1,3 +1,4 @@
+from langfuse import observe
 from multiagent_rag.utils.db_client import PineconeClient
 from multiagent_rag.utils.logger import get_logger
 
@@ -8,7 +9,6 @@ class Retriever:
     def __init__(self):
         self.db = PineconeClient()
 
-    from langfuse import observe
     @observe()
     def retrieve(self, query: str, k: int = 5, intent: str = "unknown") -> list:
         results = self.db.search(query, k=k, intent=intent)
@@ -17,12 +17,10 @@ class Retriever:
             logger.warning(f"No relevant documents found for query: {query}")
             return []
 
-        clean_docs = []
-        for doc in results:
-            clean_docs.append({
-                "content": doc.page_content,
-                "metadata": doc.metadata,
-            })
+        clean_docs = [
+            {"content": doc.page_content, "metadata": doc.metadata}
+            for doc in results
+        ]
 
         logger.info(f"Retrieved {len(clean_docs)} chunks (intent={intent})")
         return clean_docs

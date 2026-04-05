@@ -2,6 +2,7 @@ import importlib.util
 import os
 import sys
 
+from langfuse import observe
 from multiagent_rag.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,7 +18,9 @@ class EmotionAgent:
 
     def _load_model(self):
         try:
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+            project_root = os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            )
             emotion_model_dir = os.path.join(project_root, "emotion-model")
             model_path = os.path.join(emotion_model_dir, "models", "emotion_model_final_v2.keras")
 
@@ -28,8 +31,10 @@ class EmotionAgent:
             if emotion_model_dir not in sys.path:
                 sys.path.insert(0, emotion_model_dir)
 
-            spec = importlib.util.spec_from_file_location("emotion_model_main",
-                os.path.join(emotion_model_dir, "main.py"))
+            spec = importlib.util.spec_from_file_location(
+                "emotion_model_main",
+                os.path.join(emotion_model_dir, "main.py"),
+            )
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
@@ -43,7 +48,6 @@ class EmotionAgent:
             self._model = False
             self._predict_fn = None
 
-    from langfuse import observe
     @observe(as_type="generation")
     def detect_from_audio(self, audio_path: str) -> dict:
         if self._model and self._predict_fn and audio_path:
@@ -55,7 +59,6 @@ class EmotionAgent:
                 logger.error(f"Emotion detection from audio failed: {e}")
         return {"emotion": "neutral", "confidence": 0.0}
 
-    from langfuse import observe
     @observe(as_type="generation")
     def detect_from_text(self, text: str) -> dict:
         return self._keyword_fallback(text)
@@ -87,22 +90,37 @@ class EmotionAgent:
                     except (IndexError, ValueError):
                         pass
 
-        emotion_map = {"Angry": "angry", "Sad": "sad", "Neutral": "neutral", "Happy": "happy", }
-
-        return {"emotion": emotion_map.get(best_class, "neutral"), "confidence": round(best_prob, 3), }
+        emotion_map = {"Angry": "angry", "Sad": "sad", "Neutral": "neutral", "Happy": "happy"}
+        return {
+            "emotion": emotion_map.get(best_class, "neutral"),
+            "confidence": round(best_prob, 3),
+        }
 
     def _keyword_fallback(self, text: str) -> dict:
         text_lower = text.lower()
         emotion_keywords = {
-            "angry": ["angry", "furious", "outraged", "terrible", "worst", "hate", "ridiculous", "unacceptable",
-                      "disgusting", "awful"],
-            "frustrated": ["frustrated", "annoying", "irritating", "stuck", "can't", "won't work", "not working",
-                           "broken", "useless", "waste", "still", "again", "keep"],
-            "happy": ["thank", "thanks", "great", "awesome", "excellent", "perfect", "amazing", "love", "wonderful",
-                      "appreciate", "helpful", "solved"],
-            "sad": ["sad", "disappointed", "unfortunately", "sorry", "lost", "miss", "upset", "unhappy", "regret"],
-            "worried": ["worried", "concerned", "afraid", "scared", "anxious", "urgent", "emergency", "help",
-                        "please"], }
+            "angry": [
+                "angry", "furious", "outraged", "terrible", "worst",
+                "hate", "ridiculous", "unacceptable", "disgusting", "awful",
+            ],
+            "frustrated": [
+                "frustrated", "annoying", "irritating", "stuck", "can't",
+                "won't work", "not working", "broken", "useless", "waste",
+                "still", "again", "keep",
+            ],
+            "happy": [
+                "thank", "thanks", "great", "awesome", "excellent", "perfect",
+                "amazing", "love", "wonderful", "appreciate", "helpful", "solved",
+            ],
+            "sad": [
+                "sad", "disappointed", "unfortunately", "sorry", "lost",
+                "miss", "upset", "unhappy", "regret",
+            ],
+            "worried": [
+                "worried", "concerned", "afraid", "scared", "anxious",
+                "urgent", "emergency", "help", "please",
+            ],
+        }
         for emotion, keywords in emotion_keywords.items():
             matches = sum(1 for kw in keywords if kw in text_lower)
             if matches >= 2:

@@ -15,7 +15,7 @@ class VoiceHandler:
                 audio = self.recognizer.listen(source, timeout=8, phrase_time_limit=15)
 
             text = self.recognizer.recognize_google(audio)
-            clean_text = re.sub(r'[^a-zA-Z0-9\s]', '', text).strip()
+            clean_text = re.sub(r"[^a-zA-Z0-9\s]", "", text).strip()
 
             if not clean_text:
                 return ""

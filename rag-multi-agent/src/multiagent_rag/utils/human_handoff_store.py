@@ -160,7 +160,8 @@ def mark_ended(handoff_id: str):
     with _lock:
         with _get_connection() as conn:
             conn.execute(
-                "UPDATE human_handoff_queue SET status='ended', actioned_at=? WHERE id=? AND status IN ('ringing','answered')",
+                "UPDATE human_handoff_queue SET status='ended', actioned_at=? "
+                "WHERE id=? AND status IN ('ringing','answered')",
                 (now, handoff_id),
             )
             conn.commit()

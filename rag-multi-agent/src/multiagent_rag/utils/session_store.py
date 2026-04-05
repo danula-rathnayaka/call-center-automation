@@ -10,8 +10,6 @@ from multiagent_rag.utils.logger import get_logger
 logger = get_logger(__name__)
 
 _DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "sessions.db")
-
-# One lock per db path to prevent write contention from concurrent calls
 _lock = threading.Lock()
 
 
@@ -69,11 +67,13 @@ def _deserialize_message(role: str, content: str) -> BaseMessage:
 
 
 def load_history(session_id: str) -> List[BaseMessage]:
-    """Load the stored recent chat history for a session."""
     try:
         with _get_connection() as conn:
-            rows = conn.execute("SELECT role, content FROM session_history "
-                                "WHERE session_id = ? ORDER BY turn_index ASC", (session_id,)).fetchall()
+            rows = conn.execute(
+                "SELECT role, content FROM session_history "
+                "WHERE session_id = ? ORDER BY turn_index ASC",
+                (session_id,),
+            ).fetchall()
         return [_deserialize_message(r["role"], r["content"]) for r in rows]
     except Exception as e:
         logger.error(f"Failed to load history for session {session_id}: {e}")
@@ -81,28 +81,26 @@ def load_history(session_id: str) -> List[BaseMessage]:
 
 
 def save_history(session_id: str, history: List[BaseMessage]):
-    """
-    Replace stored history for a session.
-    Only stores the recent window (post-summarization) — never the full log.
-    """
     try:
         serialized = [_serialize_message(m) for m in history]
         with _lock:
             with _get_connection() as conn:
                 conn.execute("DELETE FROM session_history WHERE session_id = ?", (session_id,))
-                conn.executemany("INSERT INTO session_history (session_id, turn_index, role, content) "
-                                 "VALUES (?, ?, ?, ?)",
-                    [(session_id, i, s["role"], s["content"]) for i, s in enumerate(serialized)])
+                conn.executemany(
+                    "INSERT INTO session_history (session_id, turn_index, role, content) VALUES (?, ?, ?, ?)",
+                    [(session_id, i, s["role"], s["content"]) for i, s in enumerate(serialized)],
+                )
                 conn.commit()
     except Exception as e:
         logger.error(f"Failed to save history for session {session_id}: {e}")
 
 
 def load_summary(session_id: str) -> Optional[str]:
-    """Load the compressed summary of older turns for a session."""
     try:
         with _get_connection() as conn:
-            row = conn.execute("SELECT summary FROM session_summary WHERE session_id = ?", (session_id,)).fetchone()
+            row = conn.execute(
+                "SELECT summary FROM session_summary WHERE session_id = ?", (session_id,)
+            ).fetchone()
         return row["summary"] if row else None
     except Exception as e:
         logger.error(f"Failed to load summary for session {session_id}: {e}")
@@ -110,23 +108,22 @@ def load_summary(session_id: str) -> Optional[str]:
 
 
 def save_summary(session_id: str, summary: str):
-    """Upsert the compressed summary for a session."""
     try:
         from datetime import datetime, timezone
         now = datetime.now(timezone.utc).isoformat()
         with _lock:
             with _get_connection() as conn:
-                conn.execute("INSERT INTO session_summary (session_id, summary, updated_at) "
-                             "VALUES (?, ?, ?) "
-                             "ON CONFLICT(session_id) DO UPDATE SET summary=excluded.summary, updated_at=excluded.updated_at",
-                    (session_id, summary, now))
+                conn.execute(
+                    "INSERT INTO session_summary (session_id, summary, updated_at) VALUES (?, ?, ?) "
+                    "ON CONFLICT(session_id) DO UPDATE SET summary=excluded.summary, updated_at=excluded.updated_at",
+                    (session_id, summary, now),
+                )
                 conn.commit()
     except Exception as e:
         logger.error(f"Failed to save summary for session {session_id}: {e}")
 
 
 def delete_session(session_id: str):
-    """Wipe all data for a session (e.g. after call ends)."""
     try:
         with _lock:
             with _get_connection() as conn:

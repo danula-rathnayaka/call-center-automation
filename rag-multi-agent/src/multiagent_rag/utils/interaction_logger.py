@@ -18,15 +18,34 @@ class InteractionLogger:
         self._log_file = os.path.join(self._log_dir, "interactions.jsonl")
         os.makedirs(self._log_dir, exist_ok=True)
 
-    def log_interaction(self, session_id: str, query: str, response: str, emotion: str = "neutral",
-            emotion_confidence: float = 0.0, response_confidence: float = 0.0, should_escalate: bool = False,
-            escalation_reason: str = "", intent: str = "unknown", retrieved_docs_count: int = 0,
-            latency_ms: dict = None, ):
-        entry = {"timestamp": datetime.now(timezone.utc).isoformat(), "session_id": session_id, "query": query,
-            "response": response, "emotion": emotion, "emotion_confidence": emotion_confidence,
-            "response_confidence": response_confidence, "should_escalate": should_escalate,
-            "escalation_reason": escalation_reason, "intent": intent, "retrieved_docs_count": retrieved_docs_count,
-            "latency_ms": latency_ms or {}, }
+    def log_interaction(
+        self,
+        session_id: str,
+        query: str,
+        response: str,
+        emotion: str = "neutral",
+        emotion_confidence: float = 0.0,
+        response_confidence: float = 0.0,
+        should_escalate: bool = False,
+        escalation_reason: str = "",
+        intent: str = "unknown",
+        retrieved_docs_count: int = 0,
+        latency_ms: dict = None,
+    ):
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "session_id": session_id,
+            "query": query,
+            "response": response,
+            "emotion": emotion,
+            "emotion_confidence": emotion_confidence,
+            "response_confidence": response_confidence,
+            "should_escalate": should_escalate,
+            "escalation_reason": escalation_reason,
+            "intent": intent,
+            "retrieved_docs_count": retrieved_docs_count,
+            "latency_ms": latency_ms or {},
+        }
 
         try:
             with _write_lock:
