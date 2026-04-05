@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from pydantic import BaseModel, Field
 
@@ -113,13 +113,13 @@ class DeleteToolResponse(BaseModel):
 
 
 class HandoffQueueItem(BaseModel):
-    id: str
+    id: Union[str, int]
     session_id: str
     phone_number: Optional[str] = None
     query: str
-    emotion: str = "neutral"
-    escalation_reason: str = ""
-    intent: str = "unknown"
+    emotion: Optional[str] = "neutral"
+    escalation_reason: Optional[str] = ""
+    intent: Optional[str] = "unknown"
     status: str
     created_at: str
     answered_at: Optional[str] = None

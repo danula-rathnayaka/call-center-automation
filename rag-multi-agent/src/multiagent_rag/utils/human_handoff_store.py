@@ -93,9 +93,13 @@ def enqueue_handoff(
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ringing', ?)
                 """,
                 (
-                    handoff_id, session_id, phone_number, query, final_answer,
-                    emotion, emotion_confidence, response_confidence, escalation_reason,
-                    intent, conversation_summary, history_serialized, json.dumps(latency_ms), now,
+                    str(handoff_id), str(session_id), str(phone_number) if phone_number else None,
+                    str(query), str(final_answer), str(emotion), 
+                    float(emotion_confidence) if emotion_confidence is not None else 0.0,
+                    float(response_confidence) if response_confidence is not None else 0.0, 
+                    str(escalation_reason) if escalation_reason else "",
+                    str(intent), str(conversation_summary) if conversation_summary else "", 
+                    history_serialized, json.dumps(latency_ms), now,
                 ),
             )
             conn.commit()
