@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { CallRow } from "../ui/CallRow";
 import { ActionCard } from "../ui/ActionCard";
 import { UserButton, useUser } from "@clerk/nextjs";
@@ -9,6 +9,21 @@ import { useRouter } from "next/navigation";
 export default function AdminPage() {
   const { user } = useUser();
   const router = useRouter();
+  const [recentCalls, setRecentCalls] = useState<any[]>([]);
+
+  const fetchQueue = async () => {
+    try {
+      // History
+      const historyRes = await fetch(
+        "http://localhost:8000/api/handoff/history",
+      );
+      const historyData = await historyRes.json();
+
+      setRecentCalls(historyData.items || []);
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    }
+  };
 
   const today = useMemo(() => {
     return new Date().toLocaleDateString("en-US", {
@@ -18,6 +33,31 @@ export default function AdminPage() {
       day: "numeric",
     });
   }, []);
+
+  const formatDuration = (start: string, end: string) => {
+    if (!start || !end) return "—";
+
+    const diff = Math.floor(
+      (new Date(end).getTime() - new Date(start).getTime()) / 1000,
+    );
+
+    const mins = Math.floor(diff / 60);
+    const secs = diff % 60;
+
+    return `${mins}m ${secs}s`;
+  };
+
+  const formatDateLabel = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return "Today";
+    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className="flex min-h-screen bg-neutral-50 text-neutral-800">
@@ -52,7 +92,7 @@ export default function AdminPage() {
         </div>
 
         {/* Recent Calls */}
-        <div className="mt-16">
+        <div className="mt-3">
           <h2 className="text-lg font-semibold mb-6">Recent Calls</h2>
 
           <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
@@ -66,24 +106,40 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                <CallRow
-                  phone="+94 77 123 4567"
-                  duration="4m 12s"
-                  status="Completed"
-                  date="Today"
-                />
-                <CallRow
-                  phone="+94 71 998 4455"
-                  duration="—"
-                  status="Missed"
-                  date="Today"
-                />
-                <CallRow
-                  phone="+94 76 111 2233"
-                  duration="2m 03s"
-                  status="Completed"
-                  date="Yesterday"
-                />
+                {recentCalls.length > 0 ? (
+                  recentCalls.map((call) => {
+                    const duration = formatDuration(
+                      call.answered_at,
+                      call.actioned_at,
+                    );
+
+                    const status =
+                      call.status === "ended"
+                        ? "Completed"
+                        : call.answered_at
+                          ? "Completed"
+                          : "Missed";
+
+                    return (
+                      <CallRow
+                        key={call.id}
+                        phone={call.phone_number}
+                        duration={duration}
+                        status={status}
+                        date={formatDateLabel(call.created_at)}
+                      />
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="text-center py-10 text-neutral-400"
+                    >
+                      No recent calls available
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
